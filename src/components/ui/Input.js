@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import Icon from './Icon';
 import { cn } from './cn';
+import { useThemeMode } from '../../context/ThemeModeContext';
+import { colors } from '../../theme';
 
 export default function Input({
   label,
@@ -14,6 +16,8 @@ export default function Input({
   inputClassName,
   ...rest
 }) {
+  const { resolvedScheme } = useThemeMode();
+  const placeholderColor = colors[resolvedScheme].onSurfaceVariant;
   return (
     <View style={style} className={cn('mb-1', className)}>
       {!!label && (
@@ -27,7 +31,7 @@ export default function Input({
       >
         {!!left && <Icon name={left} size={20} className="mr-2" />}
         <TextInput
-          placeholderTextColor="#79747E"
+          placeholderTextColor={placeholderColor}
           className={cn('flex-1 py-2.5 text-onSurface dark:text-onSurface-dark', inputClassName)}
           {...rest}
         />

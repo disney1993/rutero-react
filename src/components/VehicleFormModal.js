@@ -5,7 +5,7 @@ import { PLATE_REGEX, isValidHexColor } from '../utils/validators';
 import { api } from '../utils/apiClient';
 import AutocompleteInput from './AutocompleteInput';
 
-const emptyForm = { plate: '', make: '', model: '', color: '', year: '', seats: '', vehicle_type: '', active: true, notes: '' };
+const emptyForm = { plate: '', make: '', model: '', color: '', year: '', seats: '', vehicle_type: '', active: true, is_default: false, notes: '' };
 const currentYear = new Date().getFullYear();
 
 function validate(form) {
@@ -28,7 +28,7 @@ function validate(form) {
   return e;
 }
 
-export default function VehicleFormModal({ visible, onDismiss, onSubmit, initialValues, submitting }) {
+export default function VehicleFormModal({ visible, onDismiss, onSubmit, initialValues, vehicles = [], submitting }) {
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
   const [makes, setMakes] = useState([]);
@@ -82,9 +82,16 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
       seats: form.seats ? Number(form.seats) : null,
       vehicle_type: form.vehicle_type.trim() || null,
       active: form.active,
+      is_default: form.is_default,
       notes: form.notes || null,
     });
   };
+
+  // El primer vehículo se marca predeterminado automáticamente en el
+  // backend; a partir del segundo, se puede elegir al crear o cambiar luego
+  // desde la edición. Nunca se puede "desmarcar" sin promover otro vehículo.
+  const isFirstVehicle = !initialValues && vehicles.length === 0;
+  const isCurrentDefault = !!initialValues?.is_default;
 
   return (
     <Dialog visible={visible} onDismiss={onDismiss} contentStyle={{ maxWidth: 480, maxHeight: '90%' }} contentClassName="p-0">
@@ -159,6 +166,23 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
           <View className="flex-row items-center justify-between my-3">
             <Text className="text-onSurface dark:text-onSurface-dark">Activo</Text>
             <Switch value={!!form.active} onValueChange={set('active')} />
+          </View>
+        )}
+
+        {isFirstVehicle && (
+          <Text className="text-xs mb-3 text-primary dark:text-primary-dark">
+            Se marcará automáticamente como tu vehículo predeterminado.
+          </Text>
+        )}
+        {isCurrentDefault && (
+          <Text className="text-xs mb-3 text-primary dark:text-primary-dark">
+            Este es tu vehículo predeterminado. Para cambiarlo, marca otro vehículo como predeterminado.
+          </Text>
+        )}
+        {!isFirstVehicle && !isCurrentDefault && (
+          <View className="flex-row items-center justify-between my-3">
+            <Text className="text-onSurface dark:text-onSurface-dark">Vehículo predeterminado</Text>
+            <Switch value={!!form.is_default} onValueChange={set('is_default')} />
           </View>
         )}
 

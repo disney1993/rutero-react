@@ -3,30 +3,37 @@ import { DefaultTheme as NavDefaultTheme, DarkTheme as NavDarkTheme } from '@rea
 // Paleta plana usada donde hace falta un color "crudo" fuera de className
 // (RefreshControl tintColor, StatusBar, color de icono, fondos de Chip, etc.)
 // Mismos valores que tailwind.config.js — mantener ambos en sync si cambian.
+//
+// Claro: tonos "papel" cálidos con superficies violeta-lavanda para que el
+// header/las tarjetas se distingan del fondo general (nunca blanco puro).
+// Oscuro: estética cyberpunk/neón — el fondo general es un gris neutro
+// oscuro (sin tinte, para no deslumbrar en pantallas grandes de texto);
+// el tinte violeta se reserva a la superficie elevada (header/tarjetas) y
+// los acentos eléctricos (violeta, cian, lima) sobre texto claro legible.
 export const colors = {
   light: {
-    primary: '#4F46E5',
-    secondary: '#059669',
-    tertiary: '#F59E0B',
-    background: '#FFFFFF',
-    surface: '#FFFFFF',
-    onSurface: '#1C1B1F',
-    onSurfaceVariant: '#49454F',
-    surfaceDisabled: '#E7E0EC',
-    border: '#CAC4D0',
-    error: '#B3261E',
+    primary: '#5A31D8',
+    secondary: '#0E7C7B',
+    tertiary: '#B45309',
+    background: '#F6F4EF',
+    surface: '#ECE8F7',
+    onSurface: '#241F33',
+    onSurfaceVariant: '#5C5568',
+    surfaceDisabled: '#DAD3EC',
+    border: '#D3CBE6',
+    error: '#C0293D',
   },
   dark: {
-    primary: '#818CF8',
-    secondary: '#34D399',
-    tertiary: '#FBBF24',
-    background: '#141218',
-    surface: '#141218',
-    onSurface: '#E6E1E5',
-    onSurfaceVariant: '#CAC4D0',
-    surfaceDisabled: '#49454F',
-    border: '#49454F',
-    error: '#F2B8B5',
+    primary: '#9D3DF2',
+    secondary: '#00E5FF',
+    tertiary: '#E9FF3D',
+    background: '#0A0912',
+    surface: '#15132A',
+    onSurface: '#F1EEFF',
+    onSurfaceVariant: '#B6AFD6',
+    surfaceDisabled: '#2B2748',
+    border: '#3A3560',
+    error: '#FF3B6B',
   },
 };
 

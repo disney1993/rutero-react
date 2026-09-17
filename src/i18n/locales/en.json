@@ -20,6 +20,7 @@
     "myVehicles": "Vehicles",
     "driverMode": "Workday",
     "profile": "My Profile",
+    "settings": "Settings",
     "logout": "Log Out"
   },
   "auth": {

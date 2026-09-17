@@ -12,23 +12,26 @@ export default function AppDrawerContent(props) {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { resolvedScheme } = useThemeMode();
-  const errorColor = colors[resolvedScheme].error;
+  const themeColors = colors[resolvedScheme];
+  const errorColor = themeColors.error;
 
   return (
     <View className="flex-1">
       <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: 0 }}>
-        <View className="p-5 items-start">
+        <View className="p-5 pb-4 items-start">
           <Avatar.Text size={56} label={getInitials(user?.first_name, user?.last_name)} color={user?.avatar_color || '#78909C'} />
           <Text
             numberOfLines={1}
-            className="mt-2.5 font-bold self-stretch text-onSurface dark:text-onSurface-dark"
+            className="mt-3 text-base font-bold self-stretch"
+            style={{ color: themeColors.onSurface }}
           >
             {user?.first_name} {user?.last_name}
           </Text>
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            className="opacity-60 self-stretch text-xs text-onSurface dark:text-onSurface-dark"
+            className="mt-0.5 self-stretch text-xs"
+            style={{ color: themeColors.onSurfaceVariant }}
           >
             {user?.email}
           </Text>

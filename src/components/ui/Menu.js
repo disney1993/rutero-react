@@ -47,8 +47,9 @@ export default function Menu({ visible, onDismiss, anchor, children }) {
   );
 }
 
-Menu.Item = ({ title, onPress, leadingIcon, className }) => (
-  <Pressable onPress={onPress} className={cn('px-4 py-3', className)}>
-    <Text className="text-onSurface dark:text-onSurface-dark">{title}</Text>
+Menu.Item = ({ title, onPress, dotColor, selected, className }) => (
+  <Pressable onPress={onPress} className={cn('flex-row items-center px-4 py-3', className)}>
+    {!!dotColor && <View style={{ backgroundColor: dotColor }} className="w-2.5 h-2.5 rounded-full mr-2.5" />}
+    <Text className={cn('flex-1 text-onSurface dark:text-onSurface-dark', selected && 'font-bold')}>{title}</Text>
   </Pressable>
 );

@@ -2,8 +2,12 @@ import React from 'react';
 import { View, Pressable, Text } from 'react-native';
 import Icon from './Icon';
 import { cn } from './cn';
+import { useThemeMode } from '../../context/ThemeModeContext';
+import { colors } from '../../theme';
 
 export default function SegmentedButtons({ value, onValueChange, buttons, style, className }) {
+  const { resolvedScheme } = useThemeMode();
+  const primaryColor = colors[resolvedScheme].primary;
   return (
     <View
       style={style}
@@ -22,9 +26,15 @@ export default function SegmentedButtons({ value, onValueChange, buttons, style,
             )}
           >
             {!!b.icon && (
-              <Icon name={b.icon} size={16} color={active ? '#fff' : '#4F46E5'} className="mr-1" />
+              <Icon name={b.icon} size={16} color={active ? '#fff' : primaryColor} className="mr-1" />
             )}
-            <Text className={active ? 'text-white' : 'text-primary dark:text-primary-dark'}>{b.label}</Text>
+            {!!b.dotColor && (
+              <View
+                style={{ backgroundColor: b.dotColor }}
+                className={cn('w-2.5 h-2.5 rounded-full mr-1.5', active && 'border border-white')}
+              />
+            )}
+            <Text numberOfLines={1} className={active ? 'text-white' : 'text-primary dark:text-primary-dark'}>{b.label}</Text>
           </Pressable>
         );
       })}

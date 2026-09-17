@@ -1,15 +1,13 @@
 export const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pendiente' },
   { value: 'completed', label: 'Completado' },
-  { value: 'rejected', label: 'Rechazado' },
   { value: 'cancelled', label: 'Cancelado' },
 ];
 
 export const STATUS_COLORS = {
   pending: '#FFA726',
-  completed: '#66BB6A',
-  rejected: '#EF5350',
-  cancelled: '#78909C',
+  completed: '#16A34A',
+  cancelled: '#DC2626',
 };
 
 export function statusLabel(status) {
@@ -43,6 +41,19 @@ export function formatDateHuman(iso) {
 }
 
 export const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+// Hora actual redondeada hacia arriba al siguiente cuarto de hora (1:05 ->
+// 1:15, 1:16 -> 1:30, 1:00 exacto se queda en 1:00). Se usa como valor por
+// defecto al crear una ruta nueva, para no obligar a tocar el selector si la
+// ruta es "ahora mismo".
+export function roundUpToNext15Minutes(date = new Date()) {
+  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+  const rounded = Math.ceil(totalMinutes / 15) * 15;
+  const wrapped = rounded % (24 * 60);
+  const hours = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
 
 // Refleja exactamente la regla de RutaController@update (rutero-api): el
 // dueño (u owner_id) puede todo; cualquier otro que sea el conductor

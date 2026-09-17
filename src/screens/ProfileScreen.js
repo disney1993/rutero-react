@@ -4,16 +4,13 @@ import { Button, Card, Avatar, Input, Divider, SegmentedButtons, PageContainer }
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
-import { useThemeMode } from '../context/ThemeModeContext';
-import { changeLanguage, SUPPORTED_LANGUAGES } from '../i18n';
 import { getInitials, getRandomAvatarColor, AVATAR_PALETTE } from '../utils/avatar';
 import { isValidName, isValidEmail, isValidPassword } from '../utils/validators';
 import { toastSuccess, toastError } from '../utils/toast';
 
 export default function ProfileScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, updateUser, logout } = useAuth();
-  const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
 
   // --- Avatar color ---
   // Un único botón: genera un color nuevo y lo guarda al instante. Sin
@@ -154,28 +151,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // --- Tema e idioma: también se aplican al instante y se guardan en el
-  // perfil (además de en este dispositivo) para que viajen con la cuenta. ---
-  const changeTheme = async (value) => {
-    setThemeMode(value);
-    try {
-      const resp = await api.patch('/user/preferences', { theme: value });
-      await updateUser(resp.data);
-    } catch (err) {
-      // No crítico: el tema ya cambió localmente aunque no se pudiera guardar en el servidor.
-    }
-  };
-
-  const changeAppLanguage = async (value) => {
-    await changeLanguage(value);
-    try {
-      const resp = await api.patch('/user/preferences', { language: value });
-      await updateUser(resp.data);
-    } catch (err) {
-      // No crítico: el idioma ya cambió localmente aunque no se pudiera guardar en el servidor.
-    }
-  };
-
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }} className="bg-background dark:bg-background-dark">
       <PageContainer className="p-4">
@@ -248,31 +223,6 @@ export default function ProfileScreen() {
           <Button mode="contained" onPress={savePricing} loading={savingPricing} disabled={savingPricing || !pricingDirty || !pricingValid} className="mt-3">
             {t('profile.savePreferences')}
           </Button>
-        </Card.Content>
-      </Card>
-
-      <Card className="mb-4">
-        <Card.Content>
-          <Text className="font-bold mb-3 text-onSurface dark:text-onSurface-dark">{t('profile.appearanceSection')}</Text>
-          <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('profile.theme')}</Text>
-          <SegmentedButtons
-            value={themeMode}
-            onValueChange={changeTheme}
-            buttons={[
-              { value: 'system', label: t('profile.themeSystem') },
-              { value: 'light', label: t('profile.themeLight') },
-              { value: 'dark', label: t('profile.themeDark') },
-            ]}
-            className="mb-1"
-          />
-
-          <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('profile.language')}</Text>
-          <SegmentedButtons
-            value={i18n.language}
-            onValueChange={changeAppLanguage}
-            buttons={SUPPORTED_LANGUAGES.map((l) => ({ value: l.code, label: l.label }))}
-            className="mb-1"
-          />
         </Card.Content>
       </Card>
 

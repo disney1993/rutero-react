@@ -12,7 +12,7 @@ export default function IconButton({ icon, size = 24, onPress, disabled = false,
       style={style}
       className={cn('items-center justify-center rounded-full p-2', disabled && 'opacity-40', className)}
     >
-      <Icon name={icon} size={size} color={iconColor ?? '#49454F'} />
+      <Icon name={icon} size={size} color={iconColor} />
     </Pressable>
   );
 }

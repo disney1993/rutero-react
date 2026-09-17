@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, Platform } from 'react-native';
+import { ActivityIndicator, View, Platform, StatusBar } from 'react-native';
 import { NativeWindStyleSheet } from 'nativewind';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DrawerActions } from '@react-navigation/native';
@@ -19,6 +19,7 @@ import MyVehiclesScreen from './screens/MyVehiclesScreen';
 import RutasCalendarScreen from './screens/RutasCalendarScreen';
 import DriverModeScreen from './screens/DriverModeScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import SettingsScreen from './screens/SettingsScreen';
 import UserDashboardScreen from './screens/UserDashboardScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import AdminUserDetailScreen from './screens/AdminUserDetailScreen';
@@ -57,7 +58,13 @@ function AdminDashboardNavigator() {
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   return (
-    <AdminStack.Navigator>
+    <AdminStack.Navigator
+      screenOptions={{
+        headerTintColor: themeColors.onSurface,
+        headerStyle: { backgroundColor: themeColors.surface },
+        headerShadowVisible: false,
+      }}
+    >
       <AdminStack.Screen
         name="AdminDashboardHome"
         component={AdminDashboardScreen}
@@ -80,9 +87,20 @@ function AdminDashboardNavigator() {
 function AppDrawer() {
   const { isAdmin } = useAuth();
   const { t } = useTranslation();
+  const { resolvedScheme } = useThemeMode();
+  const themeColors = colors[resolvedScheme];
 
   return (
-    <Drawer.Navigator screenOptions={{ headerTitleAlign: 'center' }} drawerContent={(props) => <AppDrawerContent {...props} />}>
+    <Drawer.Navigator
+      screenOptions={{
+        headerTitleAlign: 'center',
+        headerTintColor: themeColors.onSurface,
+        headerStyle: { backgroundColor: themeColors.surface },
+        headerShadowVisible: false,
+        drawerStyle: { backgroundColor: themeColors.surface },
+      }}
+      drawerContent={(props) => <AppDrawerContent {...props} />}
+    >
       {isAdmin ? (
         <>
           <Drawer.Screen name="DashboardAdmin" component={AdminDashboardNavigator} options={{ headerShown: false, title: t('nav.dashboardAdmin') }} />
@@ -101,6 +119,7 @@ function AppDrawer() {
         </>
       )}
       <Drawer.Screen name="Profile" component={ProfileScreen} options={{ title: t('nav.profile') }} />
+      <Drawer.Screen name="Settings" component={SettingsScreen} options={{ title: t('nav.settings') }} />
     </Drawer.Navigator>
   );
 }
@@ -158,6 +177,10 @@ function ThemedApp() {
 
   return (
     <>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors[resolvedScheme].surface}
+      />
       <AuthProvider>
         <PreferencesSync />
         <ConfirmProvider>

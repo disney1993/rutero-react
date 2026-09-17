@@ -2,6 +2,8 @@ import React from 'react';
 import { Pressable, Text, ActivityIndicator } from 'react-native';
 import Icon from './Icon';
 import { cn } from './cn';
+import { useThemeMode } from '../../context/ThemeModeContext';
+import { colors } from '../../theme';
 
 const MODE_CONTAINER = {
   contained: 'bg-primary dark:bg-primary-dark',
@@ -28,6 +30,8 @@ export default function Button({
   textClassName,
   children,
 }) {
+  const { resolvedScheme } = useThemeMode();
+  const accentColor = mode === 'contained' ? '#fff' : colors[resolvedScheme].primary;
   const isDisabled = disabled || loading;
   return (
     <Pressable
@@ -44,13 +48,9 @@ export default function Button({
     >
       <>
         {loading && (
-          <ActivityIndicator
-            size="small"
-            color={mode === 'contained' ? '#fff' : '#4F46E5'}
-            style={{ marginRight: 8 }}
-          />
+          <ActivityIndicator size="small" color={accentColor} style={{ marginRight: 8 }} />
         )}
-        {!loading && icon && <Icon name={icon} size={18} color={mode === 'contained' ? '#fff' : '#4F46E5'} className="mr-2" />}
+        {!loading && icon && <Icon name={icon} size={18} color={accentColor} className="mr-2" />}
         <Text style={contentStyle} className={cn('font-medium', textClassName || MODE_TEXT[mode])}>
           {children}
         </Text>

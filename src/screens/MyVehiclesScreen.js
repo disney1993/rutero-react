@@ -125,13 +125,20 @@ export default function MyVehiclesScreen() {
                     >
                       {item.plate || 'Sin matrícula'}
                     </Text>
-                    <Chip
-                      compact
-                      style={{ backgroundColor: item.active ? themeColors.secondary : themeColors.surfaceDisabled }}
-                      textClassName="text-white"
-                    >
-                      {item.active ? 'Activo' : 'Inactivo'}
-                    </Chip>
+                    <View className="flex-row gap-1.5">
+                      {item.is_default && (
+                        <Chip compact style={{ backgroundColor: themeColors.primary }} textClassName="text-white">
+                          Predeterminado
+                        </Chip>
+                      )}
+                      <Chip
+                        compact
+                        style={{ backgroundColor: item.active ? themeColors.secondary : themeColors.surfaceDisabled }}
+                        textClassName="text-white"
+                      >
+                        {item.active ? 'Activo' : 'Inactivo'}
+                      </Chip>
+                    </View>
                   </View>
                   <Text className="text-sm text-onSurface dark:text-onSurface-dark">
                     {[item.make, item.model].filter(Boolean).join(' ') || 'Sin marca/modelo'}
@@ -154,6 +161,7 @@ export default function MyVehiclesScreen() {
         onDismiss={() => setFormVisible(false)}
         onSubmit={handleSubmit}
         initialValues={editingVehicle}
+        vehicles={vehicles}
         submitting={submitting}
       />
     </View>

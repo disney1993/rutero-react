@@ -236,7 +236,10 @@ export default function AdminUserDetailScreen({ route, navigation }) {
               renderItem={({ item }) => (
                 <Card className="mb-2" onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }}>
                   <Card.Content>
-                    <Text className="text-base font-medium text-onSurface dark:text-onSurface-dark">{item.plate || 'Sin matrícula'}</Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-base font-medium text-onSurface dark:text-onSurface-dark">{item.plate || 'Sin matrícula'}</Text>
+                      {item.is_default && <Text className="text-xs font-bold text-primary dark:text-primary-dark">· Predeterminado</Text>}
+                    </View>
                     <Text className="text-xs text-onSurface dark:text-onSurface-dark">{[item.make, item.model].filter(Boolean).join(' ')}</Text>
                   </Card.Content>
                   <Card.Actions>
@@ -254,6 +257,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
             onDismiss={() => setVehicleFormVisible(false)}
             onSubmit={submitVehicle}
             initialValues={editingVehicle}
+            vehicles={vehicles}
             submitting={savingVehicle}
           />
         </>

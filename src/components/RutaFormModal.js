@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { Dialog, Input, Button, SegmentedButtons, PaymentMethodField } from './ui';
-import { STATUS_OPTIONS, TIME_REGEX } from '../utils/rutas';
+import { Dialog, Input, Button, SegmentedButtons, PaymentMethodField, CAR_COLOR_PALETTE } from './ui';
+import { STATUS_OPTIONS, STATUS_COLORS, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
 import { PHONE_REGEX } from '../utils/validators';
+import { getVehicleSwatchColor } from '../utils/avatar';
 import { roundToNearest5, formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/apiClient';
@@ -31,7 +32,7 @@ const emptyForm = {
   vehicle_id: null,
 };
 
-function validate(form, fieldSet) {
+function validate(form, fieldSet, vehicles) {
   const e = {};
   if (fieldSet === 'full') {
     if (!form.client_name.trim() || form.client_name.trim().length < 2) e.client_name = 'Obligatorio, mínimo 2 caracteres';
@@ -49,6 +50,9 @@ function validate(form, fieldSet) {
     if (form.price_per_km && (isNaN(Number(form.price_per_km)) || Number(form.price_per_km) < 0)) {
       e.price_per_km = 'Debe ser un número positivo';
     }
+    // Sin vehículos no se puede exigir elegir uno (p. ej. conduciendo para un
+    // propietario ajeno, donde ni siquiera se muestra el selector).
+    if (vehicles.length > 0 && !form.vehicle_id) e.vehicle_id = 'Elige un vehículo';
   }
   if (form.final_price && (isNaN(Number(form.final_price)) || Number(form.final_price) < 0)) {
     e.final_price = 'Debe ser un número positivo';
@@ -88,11 +92,14 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
           final_price: initialValues.final_price ? String(initialValues.final_price) : '',
         });
       } else {
+        const defaultVehicle = vehicles.find((v) => v.is_default);
         setForm({
           ...emptyForm,
-          trip_date: defaultDate || '',
+          trip_date: defaultDate || todayISO(),
+          trip_time: roundUpToNext15Minutes(),
           status: 'pending',
           price_per_km: user?.price_per_km ? String(user.price_per_km) : '',
+          vehicle_id: defaultVehicle ? defaultVehicle.id : null,
         });
       }
     }
@@ -137,7 +144,7 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.origin_lat, form.origin_lng, form.destination_lat, form.destination_lng]);
 
-  const errors = validate(form, fieldSet);
+  const errors = validate(form, fieldSet, vehicles);
   const isValid = Object.keys(errors).length === 0;
 
   const currency = user?.currency || 'EUR';
@@ -247,13 +254,20 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
 
             {vehicles.length > 0 && (
               <>
-                <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">Vehículo (opcional)</Text>
+                <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">Vehículo</Text>
                 <SegmentedButtons
                   value={form.vehicle_id ? String(form.vehicle_id) : ''}
                   onValueChange={(v) => set('vehicle_id')(v ? Number(v) : null)}
-                  buttons={[{ value: '', label: 'Ninguno' }, ...vehicles.map((v) => ({ value: String(v.id), label: v.plate || `#${v.id}` }))]}
+                  buttons={vehicles.map((v) => ({
+                    value: String(v.id),
+                    label: v.plate || `#${v.id}`,
+                    dotColor: getVehicleSwatchColor(v, CAR_COLOR_PALETTE),
+                  }))}
                   className="mb-1"
                 />
+                {submitted && !!errors.vehicle_id && (
+                  <Text className="text-error dark:text-error-dark text-xs mb-3">{errors.vehicle_id}</Text>
+                )}
               </>
             )}
           </>
@@ -263,7 +277,7 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
         <SegmentedButtons
           value={form.status}
           onValueChange={set('status')}
-          buttons={STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label }))}
+          buttons={STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label, dotColor: STATUS_COLORS[s.value] }))}
           className="mb-1"
         />
 
