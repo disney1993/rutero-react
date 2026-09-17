@@ -1,27 +1,32 @@
-import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 import { DefaultTheme as NavDefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
 
-const ROUNDNESS = 16;
-
-export const lightTheme = {
-  ...MD3LightTheme,
-  roundness: ROUNDNESS,
-  colors: {
-    ...MD3LightTheme.colors,
+// Paleta plana usada donde hace falta un color "crudo" fuera de className
+// (RefreshControl tintColor, StatusBar, color de icono, fondos de Chip, etc.)
+// Mismos valores que tailwind.config.js — mantener ambos en sync si cambian.
+export const colors = {
+  light: {
     primary: '#4F46E5',
     secondary: '#059669',
     tertiary: '#F59E0B',
+    background: '#FFFFFF',
+    surface: '#FFFFFF',
+    onSurface: '#1C1B1F',
+    onSurfaceVariant: '#49454F',
+    surfaceDisabled: '#E7E0EC',
+    border: '#CAC4D0',
+    error: '#B3261E',
   },
-};
-
-export const darkTheme = {
-  ...MD3DarkTheme,
-  roundness: ROUNDNESS,
-  colors: {
-    ...MD3DarkTheme.colors,
+  dark: {
     primary: '#818CF8',
     secondary: '#34D399',
     tertiary: '#FBBF24',
+    background: '#141218',
+    surface: '#141218',
+    onSurface: '#E6E1E5',
+    onSurfaceVariant: '#CAC4D0',
+    surfaceDisabled: '#49454F',
+    border: '#49454F',
+    error: '#F2B8B5',
   },
 };
 
@@ -29,11 +34,11 @@ export const navLightTheme = {
   ...NavDefaultTheme,
   colors: {
     ...NavDefaultTheme.colors,
-    primary: lightTheme.colors.primary,
-    background: lightTheme.colors.background,
-    card: lightTheme.colors.elevation.level2,
-    text: lightTheme.colors.onSurface,
-    border: lightTheme.colors.outlineVariant,
+    primary: colors.light.primary,
+    background: colors.light.background,
+    card: colors.light.surface,
+    text: colors.light.onSurface,
+    border: colors.light.border,
   },
 };
 
@@ -41,10 +46,10 @@ export const navDarkTheme = {
   ...NavDarkTheme,
   colors: {
     ...NavDarkTheme.colors,
-    primary: darkTheme.colors.primary,
-    background: darkTheme.colors.background,
-    card: darkTheme.colors.elevation.level2,
-    text: darkTheme.colors.onSurface,
-    border: darkTheme.colors.outlineVariant,
+    primary: colors.dark.primary,
+    background: colors.dark.background,
+    card: colors.dark.surface,
+    text: colors.dark.onSurface,
+    border: colors.dark.border,
   },
 };

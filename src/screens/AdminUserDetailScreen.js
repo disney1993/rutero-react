@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, FlatList } from 'react-native';
-import { Text, Card, TextInput, Button, SegmentedButtons, HelperText, IconButton, FAB, ActivityIndicator, useTheme } from 'react-native-paper';
+import { View, Text, ScrollView, FlatList, ActivityIndicator } from 'react-native';
+import { Card, Input, Button, SegmentedButtons, IconButton, FAB, PageContainer } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
@@ -17,7 +17,6 @@ const TABS = [
 ];
 
 export default function AdminUserDetailScreen({ route, navigation }) {
-  const theme = useTheme();
   const { t } = useTranslation();
   const confirm = useConfirm();
   const initialUser = route.params.user;
@@ -152,58 +151,93 @@ export default function AdminUserDetailScreen({ route, navigation }) {
   }, [tab, loadVehicles]));
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <SegmentedButtons value={tab} onValueChange={setTab} buttons={TABS} style={styles.tabs} />
+    <View className="flex-1 bg-background dark:bg-background-dark">
+      <SegmentedButtons value={tab} onValueChange={setTab} buttons={TABS} className="m-4 mb-2" />
 
       {tab === 'profile' && (
-        <ScrollView contentContainerStyle={styles.tabContent}>
-          <View style={styles.row}>
-            <TextInput mode="outlined" label="Nombre" value={firstName} onChangeText={setFirstName} style={[styles.input, styles.half]} error={!!profileErrors.firstName} />
-            <TextInput mode="outlined" label="Primer apellido" value={lastName} onChangeText={setLastName} style={[styles.input, styles.half]} error={!!profileErrors.lastName} />
+        <ScrollView contentContainerStyle={{ paddingTop: 4 }}>
+        <PageContainer className="p-4 pt-0">
+          {user.profile_incomplete && (
+            <View className="rounded-xl px-3 py-2.5 mb-3 bg-error/15 dark:bg-error-dark/20">
+              <Text className="text-error dark:text-error-dark text-sm">
+                Este usuario no completó su perfil (falta nombre o apellido). Se le pedirá al iniciar sesión.
+              </Text>
+            </View>
+          )}
+
+          <Text className="mb-1 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">Tipo de usuario (según actividad)</Text>
+          <View className="flex-row flex-wrap gap-1.5 mb-4">
+            {user.has_owner_capability && (
+              <Text className="text-xs rounded px-2 py-1 bg-secondary/20 dark:bg-secondary-dark/20 text-secondary dark:text-secondary-dark">
+                Propietario
+              </Text>
+            )}
+            {user.has_driver_capability && (
+              <Text className="text-xs rounded px-2 py-1 bg-tertiary/20 dark:bg-tertiary-dark/20 text-tertiary dark:text-tertiary-dark">
+                Conductor
+              </Text>
+            )}
+            {!user.has_owner_capability && !user.has_driver_capability && (
+              <Text className="text-xs rounded px-2 py-1 bg-surfaceDisabled dark:bg-surfaceDisabled-dark text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                Sin actividad todavía (sin vehículos ni códigos)
+              </Text>
+            )}
           </View>
-          <HelperText type="error" visible={!!profileErrors.firstName || !!profileErrors.lastName}>
-            {profileErrors.firstName || profileErrors.lastName}
-          </HelperText>
 
-          <TextInput mode="outlined" label="Segundo apellido" value={secondLastName} onChangeText={setSecondLastName} style={styles.input} error={!!profileErrors.secondLastName} />
-          <HelperText type="error" visible={!!profileErrors.secondLastName}>{profileErrors.secondLastName}</HelperText>
+          <View className="flex-row gap-2.5">
+            <View className="flex-1">
+              <Input label="Nombre" value={firstName} onChangeText={setFirstName} error={profileErrors.firstName} />
+            </View>
+            <View className="flex-1">
+              <Input label="Primer apellido" value={lastName} onChangeText={setLastName} error={profileErrors.lastName} />
+            </View>
+          </View>
 
-          <TextInput mode="outlined" label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" style={styles.input} error={!!profileErrors.email} />
-          <HelperText type="error" visible={!!profileErrors.email}>{profileErrors.email}</HelperText>
+          <Input label="Segundo apellido" value={secondLastName} onChangeText={setSecondLastName} error={profileErrors.secondLastName} />
+          <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" error={profileErrors.email} />
 
-          <Text variant="labelLarge" style={styles.label}>Rol</Text>
-          <SegmentedButtons value={role} onValueChange={setRole} buttons={[{ value: 'user', label: 'Usuario' }, { value: 'admin', label: 'Admin' }]} style={styles.input} />
+          <Text className="mt-2 mb-2 font-medium text-onSurface dark:text-onSurface-dark">Rol</Text>
+          <SegmentedButtons value={role} onValueChange={setRole} buttons={[{ value: 'user', label: 'Usuario' }, { value: 'admin', label: 'Admin' }]} className="mb-1" />
 
-          <Text variant="labelLarge" style={styles.label}>Plan</Text>
-          <SegmentedButtons value={plan} onValueChange={setPlan} buttons={[{ value: 'free', label: 'Gratuito' }, { value: 'premium', label: 'Premium' }]} style={styles.input} />
+          <Text className="mt-2 mb-2 font-medium text-onSurface dark:text-onSurface-dark">Plan</Text>
+          <SegmentedButtons value={plan} onValueChange={setPlan} buttons={[{ value: 'free', label: 'Gratuito' }, { value: 'premium', label: 'Premium' }]} className="mb-1" />
 
-          <Button mode="contained" onPress={saveProfile} loading={savingProfile} disabled={savingProfile || !profileDirty || !profileValid} style={styles.saveButton}>
+          <Button mode="contained" onPress={saveProfile} loading={savingProfile} disabled={savingProfile || !profileDirty || !profileValid} className="mt-4">
             Guardar cambios
           </Button>
-          <Button mode="outlined" textColor={theme.colors.error} onPress={confirmDeleteUser} loading={deleting} disabled={deleting} style={[styles.deleteButton, { borderColor: theme.colors.error }]}>
+          <Button
+            mode="outlined"
+            onPress={confirmDeleteUser}
+            loading={deleting}
+            disabled={deleting}
+            className="mt-3 border-error dark:border-error-dark"
+            textClassName="text-error dark:text-error-dark"
+          >
             Eliminar usuario
           </Button>
+        </PageContainer>
         </ScrollView>
       )}
 
       {tab === 'vehicles' && (
         <>
-          {loadingVehicles ? <ActivityIndicator style={styles.loader} /> : (
+          {loadingVehicles ? <ActivityIndicator className="mt-6" /> : (
+            <PageContainer className="flex-1">
             <FlatList
               data={vehicles}
               keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
               ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <IconButton icon="car-outline" size={40} style={styles.emptyIcon} disabled />
-                  <Text style={styles.emptyText}>Sin vehículos</Text>
+                <View className="items-center mt-6">
+                  <IconButton icon="car-outline" size={40} disabled className="opacity-40" />
+                  <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">Sin vehículos</Text>
                 </View>
               }
               renderItem={({ item }) => (
-                <Card style={styles.card} onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }}>
+                <Card className="mb-2" onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }}>
                   <Card.Content>
-                    <Text variant="titleMedium">{item.plate || 'Sin matrícula'}</Text>
-                    <Text variant="bodySmall">{[item.make, item.model].filter(Boolean).join(' ')}</Text>
+                    <Text className="text-base font-medium text-onSurface dark:text-onSurface-dark">{item.plate || 'Sin matrícula'}</Text>
+                    <Text className="text-xs text-onSurface dark:text-onSurface-dark">{[item.make, item.model].filter(Boolean).join(' ')}</Text>
                   </Card.Content>
                   <Card.Actions>
                     <IconButton icon="pencil" onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }} />
@@ -212,8 +246,9 @@ export default function AdminUserDetailScreen({ route, navigation }) {
                 </Card>
               )}
             />
+            </PageContainer>
           )}
-          <FAB icon="plus" style={styles.fab} onPress={() => { setEditingVehicle(null); setVehicleFormVisible(true); }} />
+          <FAB icon="plus" onPress={() => { setEditingVehicle(null); setVehicleFormVisible(true); }} />
           <VehicleFormModal
             visible={vehicleFormVisible}
             onDismiss={() => setVehicleFormVisible(false)}
@@ -228,7 +263,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
         // Misma pantalla que ve el propio usuario en "Mis rutas" (mes/día,
         // franjas horarias, mismo formulario), pero con permisos de admin:
         // puede editar y eliminar cualquier ruta sin restricciones.
-        <View style={styles.plannerWrap}>
+        <View className="flex-1">
           <RutasPlanner
             key={user.id}
             fetchParams={{ user_id: user.id }}
@@ -242,26 +277,3 @@ export default function AdminUserDetailScreen({ route, navigation }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  tabs: { margin: 16, marginBottom: 8 },
-  tabContent: { padding: 16, paddingTop: 4 },
-  row: { flexDirection: 'row', gap: 10 },
-  input: { marginBottom: 4 },
-  half: { flex: 1 },
-  label: { marginTop: 8, marginBottom: 8 },
-  saveButton: { marginTop: 16, borderRadius: 10 },
-  deleteButton: { marginTop: 12, borderRadius: 10 },
-  loader: { marginTop: 24 },
-  listContent: { padding: 12, paddingBottom: 80 },
-  emptyState: { alignItems: 'center', marginTop: 24 },
-  emptyIcon: { opacity: 0.4 },
-  emptyText: { textAlign: 'center', opacity: 0.6 },
-  card: { marginBottom: 8, borderRadius: 14 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chipText: { color: '#fff', fontSize: 12 },
-  route: { marginTop: 2, opacity: 0.7 },
-  fab: { position: 'absolute', right: 16, bottom: 16 },
-  plannerWrap: { flex: 1 },
-});

@@ -5,6 +5,8 @@ export const PHONE_REGEX = /^[0-9+\-\s()]{6,20}$/;
 export const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 export const CODE_REGEX = /^[A-Za-z0-9]{8}$/;
 export const PLATE_REGEX = /^[A-Za-z0-9\-\s]{1,20}$/;
+// Debe coincidir con la validación de avatar_color en rutero-api (AuthController).
+export const HEX_COLOR_REGEX = /^#[A-Fa-f0-9]{6}$/;
 // Mínimo 6 caracteres, al menos una mayúscula, un número y un símbolo.
 export const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
 
@@ -22,4 +24,8 @@ export function isValidPhone(value) {
 
 export function isValidPassword(value) {
   return value.length <= 72 && PASSWORD_REGEX.test(value);
+}
+
+export function isValidHexColor(value) {
+  return HEX_COLOR_REGEX.test(value.trim());
 }

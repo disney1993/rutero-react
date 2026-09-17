@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Button, Card, Avatar, TextInput, HelperText, Divider, SegmentedButtons, ActivityIndicator, useTheme } from 'react-native-paper';
+import { ScrollView, Text, ActivityIndicator } from 'react-native';
+import { Button, Card, Avatar, Input, Divider, SegmentedButtons, PageContainer } from '../components/ui';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,6 @@ import { isValidName, isValidEmail, isValidPassword } from '../utils/validators'
 import { toastSuccess, toastError } from '../utils/toast';
 
 export default function ProfileScreen() {
-  const theme = useTheme();
   const { t, i18n } = useTranslation();
   const { user, updateUser, logout } = useAuth();
   const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
@@ -178,96 +177,84 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.background }]}>
-      <Card style={styles.card} mode="elevated">
-        <Card.Content style={styles.centerContent}>
-          <Avatar.Text size={88} label={initials} style={{ backgroundColor: avatarColor }} />
-          <Button mode="contained" onPress={changeColor} loading={savingColor} disabled={savingColor} style={styles.smallButton}>
+    <ScrollView contentContainerStyle={{ paddingBottom: 40 }} className="bg-background dark:bg-background-dark">
+      <PageContainer className="p-4">
+      <Card className="mb-4">
+        <Card.Content className="items-center py-2">
+          <Avatar.Text size={88} label={initials} color={avatarColor} />
+          <Button mode="contained" onPress={changeColor} loading={savingColor} disabled={savingColor} className="mt-2.5 w-full">
             {t('profile.changeColor')}
           </Button>
         </Card.Content>
       </Card>
 
-      <Card style={styles.card} mode="elevated">
+      <Card className="mb-4">
         <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>{t('profile.myData')}</Text>
+          <Text className="font-bold mb-3 text-onSurface dark:text-onSurface-dark">{t('profile.myData')}</Text>
 
-          <View style={styles.row}>
-            <TextInput mode="outlined" label={t('profile.firstName')} value={firstName} onChangeText={setFirstName} style={[styles.input, styles.half]} error={!!profileErrors.firstName} />
-            <TextInput mode="outlined" label={t('profile.lastName')} value={lastName} onChangeText={setLastName} style={[styles.input, styles.half]} error={!!profileErrors.lastName} />
-          </View>
-          <HelperText type="error" visible={!!profileErrors.firstName || !!profileErrors.lastName}>
-            {profileErrors.firstName || profileErrors.lastName}
-          </HelperText>
+          <Input label={t('profile.firstName')} value={firstName} onChangeText={setFirstName} error={profileErrors.firstName} />
+          <Input label={t('profile.lastName')} value={lastName} onChangeText={setLastName} error={profileErrors.lastName} />
+          <Input label={t('profile.secondLastName')} value={secondLastName} onChangeText={setSecondLastName} error={profileErrors.secondLastName} />
+          <Input label={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" error={profileErrors.email} />
 
-          <TextInput mode="outlined" label={t('profile.secondLastName')} value={secondLastName} onChangeText={setSecondLastName} style={styles.input} error={!!profileErrors.secondLastName} />
-          <HelperText type="error" visible={!!profileErrors.secondLastName}>{profileErrors.secondLastName}</HelperText>
-
-          <TextInput mode="outlined" label={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={styles.input} error={!!profileErrors.email} />
-          <HelperText type="error" visible={!!profileErrors.email}>{profileErrors.email}</HelperText>
-
-          <Button mode="contained" onPress={saveProfile} loading={savingProfile} disabled={savingProfile || !profileDirty || !profileValid} style={styles.saveButton}>
+          <Button mode="contained" onPress={saveProfile} loading={savingProfile} disabled={savingProfile || !profileDirty || !profileValid} className="mt-3">
             {t('profile.saveData')}
           </Button>
         </Card.Content>
       </Card>
 
-      <Card style={styles.card} mode="elevated">
+      <Card className="mb-4">
         <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>{t('profile.changePassword')}</Text>
+          <Text className="font-bold mb-3 text-onSurface dark:text-onSurface-dark">{t('profile.changePassword')}</Text>
 
-          <TextInput mode="outlined" label={t('profile.currentPassword')} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry style={styles.input} error={!!passwordErrors.currentPassword} />
-          <HelperText type="error" visible={!!passwordErrors.currentPassword}>{passwordErrors.currentPassword}</HelperText>
+          <Input label={t('profile.currentPassword')} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry error={passwordErrors.currentPassword} />
+          <Input
+            label={t('profile.newPassword')}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry
+            error={passwordErrors.newPassword || t('validation.passwordComplexity')}
+          />
+          <Input label={t('profile.confirmPassword')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry error={passwordErrors.confirmPassword} />
 
-          <TextInput mode="outlined" label={t('profile.newPassword')} value={newPassword} onChangeText={setNewPassword} secureTextEntry style={styles.input} error={!!passwordErrors.newPassword} />
-          <HelperText type={passwordErrors.newPassword ? 'error' : 'info'} visible>
-            {passwordErrors.newPassword || t('validation.passwordComplexity')}
-          </HelperText>
-
-          <TextInput mode="outlined" label={t('profile.confirmPassword')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry style={styles.input} error={!!passwordErrors.confirmPassword} />
-          <HelperText type="error" visible={!!passwordErrors.confirmPassword}>{passwordErrors.confirmPassword}</HelperText>
-
-          <Button mode="contained" onPress={savePassword} loading={savingPassword} disabled={savingPassword || !passwordValid} style={styles.saveButton}>
+          <Button mode="contained" onPress={savePassword} loading={savingPassword} disabled={savingPassword || !passwordValid} className="mt-3">
             {t('profile.updatePassword')}
           </Button>
         </Card.Content>
       </Card>
 
-      <Card style={styles.card} mode="elevated">
+      <Card className="mb-4">
         <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>{t('profile.pricingSection')}</Text>
-          <Text variant="bodySmall" style={styles.hint}>{t('profile.pricingHint')}</Text>
+          <Text className="font-bold mb-3 text-onSurface dark:text-onSurface-dark">{t('profile.pricingSection')}</Text>
+          <Text className="opacity-70 text-xs mb-3 text-onSurface dark:text-onSurface-dark">{t('profile.pricingHint')}</Text>
 
-          <Text variant="labelLarge" style={styles.label}>{t('profile.currency')}</Text>
+          <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('profile.currency')}</Text>
           <SegmentedButtons
             value={currency}
             onValueChange={changeCurrency}
             buttons={[{ value: 'EUR', label: 'Euro (€)' }, { value: 'USD', label: 'Dólar ($)' }]}
-            style={styles.input}
+            className="mb-1"
           />
-          {savingCurrency && <ActivityIndicator size="small" style={styles.inlineLoader} />}
+          {savingCurrency && <ActivityIndicator size="small" className="mb-2" />}
 
-          <TextInput
-            mode="outlined"
+          <Input
             label={t('profile.pricePerKm', { currency })}
             value={pricePerKm}
             onChangeText={setPricePerKm}
             keyboardType="numeric"
-            style={styles.input}
-            error={!!pricingError}
+            error={pricingError}
           />
-          <HelperText type="error" visible={!!pricingError}>{pricingError}</HelperText>
 
-          <Button mode="contained" onPress={savePricing} loading={savingPricing} disabled={savingPricing || !pricingDirty || !pricingValid} style={styles.saveButton}>
+          <Button mode="contained" onPress={savePricing} loading={savingPricing} disabled={savingPricing || !pricingDirty || !pricingValid} className="mt-3">
             {t('profile.savePreferences')}
           </Button>
         </Card.Content>
       </Card>
 
-      <Card style={styles.card} mode="elevated">
+      <Card className="mb-4">
         <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>{t('profile.appearanceSection')}</Text>
-          <Text variant="labelLarge" style={styles.label}>{t('profile.theme')}</Text>
+          <Text className="font-bold mb-3 text-onSurface dark:text-onSurface-dark">{t('profile.appearanceSection')}</Text>
+          <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('profile.theme')}</Text>
           <SegmentedButtons
             value={themeMode}
             onValueChange={changeTheme}
@@ -276,38 +263,22 @@ export default function ProfileScreen() {
               { value: 'light', label: t('profile.themeLight') },
               { value: 'dark', label: t('profile.themeDark') },
             ]}
-            style={styles.input}
+            className="mb-1"
           />
 
-          <Text variant="labelLarge" style={styles.label}>{t('profile.language')}</Text>
+          <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('profile.language')}</Text>
           <SegmentedButtons
             value={i18n.language}
             onValueChange={changeAppLanguage}
             buttons={SUPPORTED_LANGUAGES.map((l) => ({ value: l.code, label: l.label }))}
-            style={styles.input}
+            className="mb-1"
           />
         </Card.Content>
       </Card>
 
-      <Divider style={styles.divider} />
-      <Button mode="text" onPress={logout} style={styles.logoutButton}>{t('nav.logout')}</Button>
+      <Divider className="my-2" />
+      <Button mode="text" onPress={logout} className="self-center">{t('nav.logout')}</Button>
+      </PageContainer>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContent: { padding: 16, paddingBottom: 40 },
-  card: { borderRadius: 16, marginBottom: 16 },
-  centerContent: { alignItems: 'center', paddingVertical: 8 },
-  sectionTitle: { fontWeight: '700', marginBottom: 12 },
-  hint: { opacity: 0.7, marginBottom: 12 },
-  row: { flexDirection: 'row', gap: 10 },
-  input: { marginBottom: 4 },
-  half: { flex: 1 },
-  label: { marginBottom: 8, marginTop: 4 },
-  smallButton: { marginTop: 10, borderRadius: 10, width: '100%' },
-  saveButton: { marginTop: 12, borderRadius: 10 },
-  inlineLoader: { marginBottom: 8 },
-  divider: { marginTop: 8, marginBottom: 8 },
-  logoutButton: { alignSelf: 'center' },
-});

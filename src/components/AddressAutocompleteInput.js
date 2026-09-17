@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { TextInput, Card, Text, ActivityIndicator, useTheme } from 'react-native-paper';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { Input, Card } from './ui';
 import { api } from '../utils/apiClient';
 
 const DEBOUNCE_MS = 450;
@@ -12,7 +12,6 @@ const MIN_CHARS = 3;
 // por lo que no se podrá calcular la distancia automáticamente para ese
 // tramo (se puede introducir el km a mano).
 export default function AddressAutocompleteInput({ label, value, onChangeText, onSelectPlace, error }) {
-  const theme = useTheme();
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -53,27 +52,36 @@ export default function AddressAutocompleteInput({ label, value, onChangeText, o
   const showList = focused && (suggestions.length > 0 || loading);
 
   return (
-    <View style={styles.wrap}>
-      <TextInput
-        mode="outlined"
+    <View style={{ position: 'relative', zIndex: 10 }}>
+      <Input
         label={label}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
         error={error}
-        right={loading ? <TextInput.Icon icon={() => <ActivityIndicator size={16} />} /> : <TextInput.Icon icon="map-marker-outline" />}
-        style={styles.input}
+        right={loading ? undefined : 'map-marker-outline'}
       />
+      {loading && (
+        <View style={{ position: 'absolute', right: 12, top: 12 }}>
+          <ActivityIndicator size={16} />
+        </View>
+      )}
       {showList && (
-        <Card style={[styles.suggestions, { backgroundColor: theme.colors.elevation.level3 }]}>
+        <Card
+          style={{ position: 'absolute', top: 58, left: 0, right: 0, zIndex: 20, elevation: 6, maxHeight: 260 }}
+        >
           {suggestions.length === 0 ? (
-            <Text style={styles.emptyItem}>{loading ? 'Buscando...' : 'Sin resultados. Puedes escribirla igual.'}</Text>
+            <Text className="px-4 py-2.5 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+              {loading ? 'Buscando...' : 'Sin resultados. Puedes escribirla igual.'}
+            </Text>
           ) : (
             suggestions.map((place, idx) => (
-              <Text key={idx} style={styles.suggestionItem} onPress={() => handleSelect(place)} numberOfLines={2}>
-                {place.display_name}
-              </Text>
+              <Pressable key={idx} onPress={() => handleSelect(place)}>
+                <Text numberOfLines={2} className="px-4 py-2.5 text-onSurface dark:text-onSurface-dark">
+                  {place.display_name}
+                </Text>
+              </Pressable>
             ))
           )}
         </Card>
@@ -81,11 +89,3 @@ export default function AddressAutocompleteInput({ label, value, onChangeText, o
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { position: 'relative', zIndex: 10 },
-  input: { marginBottom: 4 },
-  suggestions: { position: 'absolute', top: 58, left: 0, right: 0, zIndex: 20, elevation: 6, borderRadius: 8, maxHeight: 260 },
-  suggestionItem: { paddingHorizontal: 16, paddingVertical: 10 },
-  emptyItem: { paddingHorizontal: 16, paddingVertical: 10, opacity: 0.6 },
-});

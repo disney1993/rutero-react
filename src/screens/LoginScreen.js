@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions } from 'react-native';
-import { Text, TextInput, Button, Card, Divider, useTheme } from 'react-native-paper';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Card, Button, Input, Divider } from '../components/ui';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
@@ -14,10 +14,7 @@ const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClien
 const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || '';
 
 export default function LoginScreen({ navigation }) {
-  const theme = useTheme();
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
-  const cardWidth = Math.min(440, width - 32);
   const { login: setSession } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -83,83 +80,64 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.background }]}
+        contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16, minHeight: '100%' }}
+        className="bg-background dark:bg-background-dark"
         keyboardShouldPersistTaps="handled"
       >
-        <Card style={[styles.card, { width: cardWidth }]} mode="elevated">
-          <Card.Content style={styles.cardContent}>
-            <Text variant="headlineMedium" style={styles.title}>{t('auth.appName')}</Text>
-            <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        <Card className="w-full max-w-[440px]">
+          <Card.Content className="py-6">
+            <Text className="text-2xl font-bold text-center text-onSurface dark:text-onSurface-dark">
+              {t('auth.appName')}
+            </Text>
+            <Text className="text-sm text-center mb-6 mt-1 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
               {t('auth.loginTitle')}
             </Text>
 
-            <TextInput
-              mode="outlined"
+            <Input
               label={t('auth.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              left={<TextInput.Icon icon="email-outline" />}
-              style={styles.input}
+              left="email-outline"
+              className="mb-3.5"
             />
-            <TextInput
-              mode="outlined"
+            <Input
               label={t('auth.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              left={<TextInput.Icon icon="lock-outline" />}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  onPress={() => setShowPassword((v) => !v)}
-                  forceTextInputFocus={false}
-                />
-              }
-              style={styles.input}
+              left="lock-outline"
+              right={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              onRightPress={() => setShowPassword((v) => !v)}
+              className="mb-3.5"
             />
 
-            <Button
-              mode="contained"
-              onPress={login}
-              loading={loading}
-              disabled={loading}
-              style={styles.primaryButton}
-              contentStyle={styles.buttonContent}
-            >
+            <Button mode="contained" onPress={login} loading={loading} disabled={loading} className="mt-1 py-1">
               {t('auth.enter')}
             </Button>
 
-            <View style={styles.dividerRow}>
-              <Divider style={styles.dividerLine} />
-              <Text variant="labelMedium" style={[styles.dividerLabel, { color: theme.colors.onSurfaceVariant }]}>
+            <View className="flex-row items-center my-4">
+              <Divider className="flex-1" />
+              <Text className="mx-2.5 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
                 {t('auth.or')}
               </Text>
-              <Divider style={styles.dividerLine} />
+              <Divider className="flex-1" />
             </View>
 
-            <Button
-              mode="outlined"
-              icon="google"
-              onPress={loginWithGoogle}
-              loading={googleLoading}
-              disabled={googleLoading}
-              style={styles.googleButton}
-              contentStyle={styles.buttonContent}
-            >
+            <Button mode="outlined" icon="google" onPress={loginWithGoogle} loading={googleLoading} disabled={googleLoading}>
               {t('auth.continueWithGoogle')}
             </Button>
 
-            <View style={styles.quickFillRow}>
+            <View className="flex-row justify-center flex-wrap mt-4">
               <Button compact mode="text" onPress={fillAdmin}>Admin</Button>
               <Button compact mode="text" onPress={fillOwner}>Owner</Button>
               <Button compact mode="text" onPress={fillDriver}>Driver</Button>
             </View>
 
-            <Button mode="text" onPress={() => navigation.navigate('Register')} style={styles.linkButton}>
+            <Button mode="text" onPress={() => navigation.navigate('Register')} className="mt-1">
               {t('auth.noAccount')}
             </Button>
           </Card.Content>
@@ -168,27 +146,3 @@ export default function LoginScreen({ navigation }) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    minHeight: '100%',
-  },
-  card: { borderRadius: 20 },
-  cardContent: { paddingVertical: 24 },
-  title: { textAlign: 'center', fontWeight: '700' },
-  subtitle: { textAlign: 'center', marginBottom: 24 },
-  input: { marginBottom: 14 },
-  primaryButton: { marginTop: 4, borderRadius: 10 },
-  buttonContent: { paddingVertical: 6 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 18 },
-  dividerLine: { flex: 1 },
-  dividerLabel: { marginHorizontal: 10 },
-  googleButton: { borderRadius: 10 },
-  quickFillRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' },
-  linkButton: { marginTop: 4 },
-});

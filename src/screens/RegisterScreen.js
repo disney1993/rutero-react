@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions } from 'react-native';
-import { Text, TextInput, Button, Card, HelperText, Avatar, useTheme } from 'react-native-paper';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Card, Button, Input, Avatar } from '../components/ui';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
 import { getInitials, getRandomAvatarColor } from '../utils/avatar';
@@ -31,10 +31,7 @@ function validate({ firstName, lastName, secondLastName, email, password }) {
 }
 
 export default function RegisterScreen({ navigation }) {
-  const theme = useTheme();
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
-  const cardWidth = Math.min(440, width - 32);
   const { login: setSession } = useAuth();
 
   const [firstName, setFirstName] = useState('');
@@ -89,114 +86,85 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.background }]}
+        contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16, minHeight: '100%' }}
+        className="bg-background dark:bg-background-dark"
         keyboardShouldPersistTaps="handled"
       >
-        <Card style={[styles.card, { width: cardWidth }]} mode="elevated">
-          <Card.Content style={styles.cardContent}>
-            <Text variant="headlineMedium" style={styles.title}>{t('auth.registerTitle')}</Text>
-            <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        <Card className="w-full max-w-[440px]">
+          <Card.Content className="py-6">
+            <Text className="text-2xl font-bold text-center text-onSurface dark:text-onSurface-dark">
+              {t('auth.registerTitle')}
+            </Text>
+            <Text className="text-sm text-center mb-5 mt-1 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
               {t('auth.registerSubtitle')}
             </Text>
 
-            <View style={styles.avatarPreview}>
-              <Avatar.Text size={72} label={initials} style={{ backgroundColor: avatarColor }} />
-              <Text variant="bodySmall" style={[styles.avatarHint, { color: theme.colors.onSurfaceVariant }]}>
+            <View className="items-center mb-5">
+              <Avatar.Text size={72} label={initials} color={avatarColor} />
+              <Text className="mt-2 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
                 Así se verá tu avatar
               </Text>
             </View>
 
-            <View style={styles.row}>
-              <View style={styles.halfInput}>
-                <TextInput
-                  mode="outlined"
+            <View className="flex-row gap-2.5">
+              <View className="flex-1">
+                <Input
                   label={t('profile.firstName')}
                   value={firstName}
                   onChangeText={setFirstName}
-                  style={styles.input}
-                  error={showFieldError('firstName')}
+                  error={showFieldError('firstName') ? errors.firstName : undefined}
                 />
-                <HelperText type="error" visible={showFieldError('firstName')}>
-                  {errors.firstName}
-                </HelperText>
               </View>
-              <View style={styles.halfInput}>
-                <TextInput
-                  mode="outlined"
+              <View className="flex-1">
+                <Input
                   label={t('profile.lastName')}
                   value={lastName}
                   onChangeText={setLastName}
-                  style={styles.input}
-                  error={showFieldError('lastName')}
+                  error={showFieldError('lastName') ? errors.lastName : undefined}
                 />
-                <HelperText type="error" visible={showFieldError('lastName')}>
-                  {errors.lastName}
-                </HelperText>
               </View>
             </View>
 
-            <TextInput
-              mode="outlined"
+            <Input
               label={t('profile.secondLastName')}
               value={secondLastName}
               onChangeText={setSecondLastName}
-              style={styles.input}
-              error={showFieldError('secondLastName')}
+              error={showFieldError('secondLastName') ? errors.secondLastName : undefined}
             />
-            <HelperText type="error" visible={showFieldError('secondLastName')}>
-              {errors.secondLastName}
-            </HelperText>
 
-            <TextInput
-              mode="outlined"
+            <Input
               label={t('auth.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              left={<TextInput.Icon icon="email-outline" />}
-              style={styles.input}
-              error={showFieldError('email')}
+              left="email-outline"
+              error={showFieldError('email') ? errors.email : undefined}
             />
-            <HelperText type="error" visible={showFieldError('email')}>
-              {errors.email}
-            </HelperText>
 
-            <TextInput
-              mode="outlined"
+            <Input
               label={t('auth.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              left={<TextInput.Icon icon="lock-outline" />}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  onPress={() => setShowPassword((v) => !v)}
-                  forceTextInputFocus={false}
-                />
-              }
-              style={styles.passwordInput}
-              error={showFieldError('password')}
+              left="lock-outline"
+              right={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              onRightPress={() => setShowPassword((v) => !v)}
+              error={showFieldError('password') ? errors.password : undefined}
             />
-            <HelperText type={showFieldError('password') ? 'error' : 'info'} visible={password.length > 0}>
-              {errors.password || 'Contraseña válida'}
-            </HelperText>
+            {password.length > 0 && !showFieldError('password') && (
+              <Text className="text-xs mb-2 -mt-0.5 text-secondary dark:text-secondary-dark">
+                Contraseña válida
+              </Text>
+            )}
 
-            <Button
-              mode="contained"
-              onPress={register}
-              loading={loading}
-              disabled={loading}
-              style={styles.primaryButton}
-              contentStyle={styles.buttonContent}
-            >
+            <Button mode="contained" onPress={register} loading={loading} disabled={loading} className="mt-1.5">
               {t('auth.registerAction')}
             </Button>
 
-            <Button mode="text" onPress={() => navigation.navigate('Login')} style={styles.linkButton}>
+            <Button mode="text" onPress={() => navigation.navigate('Login')} className="mt-1">
               {t('auth.hasAccount')}
             </Button>
           </Card.Content>
@@ -205,27 +173,3 @@ export default function RegisterScreen({ navigation }) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    minHeight: '100%',
-  },
-  card: { borderRadius: 20 },
-  cardContent: { paddingVertical: 24 },
-  title: { textAlign: 'center', fontWeight: '700' },
-  subtitle: { textAlign: 'center', marginBottom: 20 },
-  avatarPreview: { alignItems: 'center', marginBottom: 20 },
-  avatarHint: { marginTop: 8 },
-  row: { flexDirection: 'row', gap: 10 },
-  input: { marginBottom: 0 },
-  passwordInput: { marginBottom: 2 },
-  halfInput: { flex: 1 },
-  primaryButton: { marginTop: 6, borderRadius: 10 },
-  buttonContent: { paddingVertical: 6 },
-  linkButton: { marginTop: 4 },
-});

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { Portal, Dialog, Text, Button, ActivityIndicator } from 'react-native-paper';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Dialog, Button } from './ui';
 import * as Clipboard from 'expo-clipboard';
 import { api, errorMessage } from '../utils/apiClient';
 
@@ -55,42 +55,39 @@ export default function OwnerCodeDialog({ visible, onDismiss }) {
   };
 
   return (
-    <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss}>
-        <Dialog.Title>Código para conductores</Dialog.Title>
-        <Dialog.Content>
-          <Text variant="bodyMedium" style={styles.hint}>
-            Comparte este código con quien vaya a conducir para ti este mes. Solo es válido durante el mes actual.
+    <Dialog visible={visible} onDismiss={onDismiss}>
+      <Dialog.Title>Código para conductores</Dialog.Title>
+      <Dialog.Content>
+        <Text className="opacity-70 mb-3 text-onSurface dark:text-onSurface-dark">
+          Comparte este código con quien vaya a conducir para ti este mes. Solo es válido durante el mes actual.
+        </Text>
+
+        {loading ? (
+          <ActivityIndicator className="my-3" />
+        ) : monthlyCode ? (
+          <Text className="text-center tracking-[4px] font-bold text-2xl my-3 text-onSurface dark:text-onSurface-dark">
+            {monthlyCode.code}
           </Text>
+        ) : (
+          <Text className="opacity-70 text-xs text-onSurface dark:text-onSurface-dark">
+            Aún no tienes un código generado este mes.
+          </Text>
+        )}
 
-          {loading ? (
-            <ActivityIndicator style={styles.loader} />
-          ) : monthlyCode ? (
-            <Text variant="displaySmall" style={styles.codeText}>{monthlyCode.code}</Text>
-          ) : (
-            <Text variant="bodySmall" style={styles.hint}>Aún no tienes un código generado este mes.</Text>
-          )}
-
-          {!!message && <Text variant="bodySmall" style={styles.message}>{message}</Text>}
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>Cerrar</Button>
-          {monthlyCode ? (
-            <Button mode="contained" onPress={copy}>Copiar</Button>
-          ) : (
-            <Button mode="contained" onPress={generate} loading={generating} disabled={generating}>
-              Generar
-            </Button>
-          )}
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+        {!!message && (
+          <Text className="mt-2 opacity-80 text-xs text-onSurface dark:text-onSurface-dark">{message}</Text>
+        )}
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button mode="text" onPress={onDismiss}>Cerrar</Button>
+        {monthlyCode ? (
+          <Button mode="contained" onPress={copy}>Copiar</Button>
+        ) : (
+          <Button mode="contained" onPress={generate} loading={generating} disabled={generating}>
+            Generar
+          </Button>
+        )}
+      </Dialog.Actions>
+    </Dialog>
   );
 }
-
-const styles = StyleSheet.create({
-  hint: { opacity: 0.7, marginBottom: 12 },
-  loader: { marginVertical: 12 },
-  codeText: { textAlign: 'center', letterSpacing: 4, fontWeight: '700', marginVertical: 12 },
-  message: { marginTop: 8, opacity: 0.8 },
-});

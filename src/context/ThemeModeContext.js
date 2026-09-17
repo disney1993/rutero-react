@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'rutero.themeMode'; // 'system' | 'light' | 'dark'
@@ -8,6 +9,7 @@ const ThemeModeContext = createContext(null);
 
 export function ThemeModeProvider({ children }) {
   const systemScheme = useColorScheme();
+  const { setColorScheme } = useNativeWindColorScheme();
   const [mode, setModeState] = useState('system');
 
   useEffect(() => {
@@ -22,6 +24,12 @@ export function ThemeModeProvider({ children }) {
   };
 
   const resolvedScheme = mode === 'system' ? (systemScheme || 'light') : mode;
+
+  // Mantiene las clases `dark:` de NativeWind sincronizadas con el modo
+  // elegido por el usuario (system/light/dark), no solo con el SO.
+  useEffect(() => {
+    setColorScheme(resolvedScheme);
+  }, [resolvedScheme]);
 
   return (
     <ThemeModeContext.Provider value={{ mode, setMode, resolvedScheme }}>

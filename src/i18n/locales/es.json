@@ -13,9 +13,12 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "myRutas": "Mis rutas",
-    "myVehicles": "Mis vehículos",
-    "driverMode": "Como conductor",
+    "dashboardAdmin": "Dashboard Admin",
+    "userDashboardAdmin": "Dashboard Usuario",
+    "myRutas": "Rutas por día",
+    "rutasCalendar": "Calendario de rutas",
+    "myVehicles": "Vehículos",
+    "driverMode": "Jornada",
     "profile": "Mi perfil",
     "logout": "Cerrar sesión"
   },

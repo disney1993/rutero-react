@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, FlatList, useWindowDimensions, RefreshControl, Pressable } from 'react-native';
-import { Text, Avatar, IconButton, FAB, ActivityIndicator, useTheme } from 'react-native-paper';
+import { View, Text, FlatList, useWindowDimensions, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
+import { Avatar, IconButton, FAB, getPaymentMethod } from './ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
@@ -10,6 +10,8 @@ import { formatCurrency } from '../utils/currency';
 import { getVehicleColor } from '../utils/avatar';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { useThemeMode } from '../context/ThemeModeContext';
+import { colors } from '../theme';
 import { toastSuccess, toastError } from '../utils/toast';
 import RutaFormModal from './RutaFormModal';
 import MonthCalendarPicker from './MonthCalendarPicker';
@@ -29,16 +31,35 @@ export default function RutasPlanner({
   createBlocked = false,
   createBlockedMessage = '',
   onCreateBlockedPress,
+  // Por defecto la fecha seleccionada es interna (con su propia barra de
+  // prev/next/día). Si el pantalla que la usa ya tiene su propio selector
+  // (p.ej. un calendario de mes), puede controlarla desde afuera pasando
+  // selectedDate/onDateChange y ocultar la barra con showDateBar={false}.
+  selectedDate: controlledDate,
+  onDateChange,
+  showDateBar = true,
 }) {
-  const theme = useTheme();
   const { t } = useTranslation();
   const { user } = useAuth();
   const confirm = useConfirm();
+  const { resolvedScheme } = useThemeMode();
+  const themeColors = colors[resolvedScheme];
   const currency = user?.currency || 'EUR';
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
 
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const isDateControlled = controlledDate !== undefined;
+  const [internalDate, setInternalDate] = useState(todayISO());
+  const selectedDate = isDateControlled ? controlledDate : internalDate;
+  const setSelectedDate = useCallback((updater) => {
+    const next = typeof updater === 'function' ? updater(selectedDate) : updater;
+    if (isDateControlled) {
+      onDateChange?.(next);
+    } else {
+      setInternalDate(next);
+    }
+  }, [isDateControlled, onDateChange, selectedDate]);
+
   const [rutas, setRutas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,7 +74,12 @@ export default function RutasPlanner({
       const dateFrom = shiftDate(selectedDate, -1);
       const dateTo = shiftDate(selectedDate, 1);
       const resp = await api.get('/rutas', { params: { date_from: dateFrom, date_to: dateTo, ...fetchParams } });
-      setRutas(resp.data.data.filter(filterRuta));
+      // La API devuelve trip_date como timestamp ISO completo (p.ej.
+      // "2026-09-19T00:00:00.000000Z"), pero aquí se compara contra fechas
+      // "YYYY-MM-DD" (selectedDate, prevDate, nextDate) — hay que recortarlo
+      // o esas comparaciones nunca coinciden y no se muestra ninguna ruta.
+      const normalized = resp.data.data.map((r) => ({ ...r, trip_date: r.trip_date?.slice(0, 10) }));
+      setRutas(normalized.filter(filterRuta));
     } catch (err) {
       toastError(errorMessage(err, 'No se pudieron cargar las rutas'));
     } finally {
@@ -145,37 +171,53 @@ export default function RutasPlanner({
     const vehicleColor = getVehicleColor(item.vehicle_id);
     const dayTag = item.trip_date === prevDate ? 'ayer' : item.trip_date === nextDate ? 'mañana' : null;
     const price = item.final_price ?? item.estimated_price;
+    const paymentMethod = item.payment_method ? getPaymentMethod(item.payment_method) : null;
+    const completerName = item.completer
+      ? `${item.completer.first_name || ''} ${item.completer.last_name || ''}`.trim()
+      : null;
 
     return (
-      <Pressable key={item.id} onPress={() => openEdit(item)} style={({ pressed }) => [
-        styles.row,
-        { borderBottomColor: theme.colors.outlineVariant },
-        pressed && { backgroundColor: theme.colors.surfaceVariant },
-      ]}>
+      <Pressable
+        key={item.id}
+        onPress={() => openEdit(item)}
+        style={({ pressed }) => [pressed && { backgroundColor: themeColors.surfaceDisabled }]}
+        className="flex-row items-center gap-3 py-2.5 border-b border-border dark:border-border-dark"
+      >
         <Avatar.Icon
           icon={item.vehicle_id ? 'car' : 'car-off'}
           size={36}
-          style={vehicleColor ? { backgroundColor: vehicleColor } : { backgroundColor: theme.colors.surfaceDisabled }}
-          color="#fff"
+          style={{ backgroundColor: vehicleColor || themeColors.surfaceDisabled }}
         />
-        <View style={styles.rowMain}>
-          <View style={styles.rowHeaderLine}>
-            <View style={styles.rowTimeAndStatus}>
-              <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status] }]} />
-              <Text variant="bodySmall" style={styles.time}>
+        <View className="flex-1 min-w-0">
+          <View className="flex-row justify-between items-center">
+            <View className="flex-row items-center gap-1.5">
+              <View style={{ backgroundColor: STATUS_COLORS[item.status] }} className="w-2 h-2 rounded-full" />
+              <Text style={{ fontVariant: ['tabular-nums'] }} className="opacity-80 text-xs text-onSurface dark:text-onSurface-dark">
                 {item.trip_time}{dayTag ? ` (${dayTag})` : ''}
               </Text>
+              {paymentMethod && (
+                <View style={{ backgroundColor: paymentMethod.color }} className="rounded px-1 py-0.5">
+                  <Text className="text-white text-[9px] font-bold">{paymentMethod.code}</Text>
+                </View>
+              )}
             </View>
             {price != null && (
-              <Text variant="bodyMedium" style={styles.price}>
+              <Text className="font-bold text-onSurface dark:text-onSurface-dark">
                 {formatCurrency(price, currency)}{!item.final_price && '*'}
               </Text>
             )}
           </View>
-          <Text variant="bodyMedium" numberOfLines={1}>{item.client_name}</Text>
-          <Text variant="bodySmall" style={styles.route} numberOfLines={1}>{item.origin} → {item.destination}</Text>
+          <Text numberOfLines={1} className="text-onSurface dark:text-onSurface-dark">{item.client_name}</Text>
+          <Text numberOfLines={1} className="mt-0.5 opacity-70 text-xs text-onSurface dark:text-onSurface-dark">
+            {item.origin} → {item.destination}
+          </Text>
+          {item.status === 'completed' && completerName && (
+            <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] italic text-onSurface dark:text-onSurface-dark">
+              Completado por: {completerName}
+            </Text>
+          )}
         </View>
-        <View style={styles.rowActions}>
+        <View className="flex-row">
           {canEdit(item) && <IconButton icon="pencil" size={16} onPress={() => openEdit(item)} />}
           {canDelete(item) && <IconButton icon="delete" size={16} onPress={() => confirmDelete(item)} />}
         </View>
@@ -184,51 +226,59 @@ export default function RutasPlanner({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View className="flex-1 bg-background dark:bg-background-dark">
       {createBlocked && (
-        <Pressable onPress={onCreateBlockedPress} style={[styles.blockedBanner, { backgroundColor: theme.colors.tertiaryContainer }]}>
-          <Text variant="bodyMedium" style={[styles.blockedBannerText, { color: theme.colors.onTertiaryContainer }]}>
+        <Pressable
+          onPress={onCreateBlockedPress}
+          className="m-3 mb-0 rounded-xl py-2.5 px-3 bg-tertiary/15 dark:bg-tertiary-dark/20"
+        >
+          <Text className="text-center text-tertiary dark:text-tertiary-dark">
             {createBlockedMessage || 'Necesitas registrar un vehículo antes de crear rutas'}
           </Text>
         </Pressable>
       )}
 
-      <View style={styles.dateBar}>
-        <IconButton icon="chevron-left" onPress={() => setSelectedDate((d) => shiftDate(d, -1))} />
-        <Text
-          variant="titleSmall"
-          style={styles.dateLabel}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          onPress={() => setCalendarVisible(true)}
-        >
-          {formatDateHuman(selectedDate)}
-        </Text>
-        <IconButton icon="chevron-right" onPress={() => setSelectedDate((d) => shiftDate(d, 1))} />
-      </View>
+      {showDateBar && (
+        <View className="flex-row items-center pt-2 px-1">
+          <IconButton icon="chevron-left" onPress={() => setSelectedDate((d) => shiftDate(d, -1))} />
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            onPress={() => setCalendarVisible(true)}
+            className="flex-1 text-center capitalize font-medium text-onSurface dark:text-onSurface-dark"
+          >
+            {formatDateHuman(selectedDate)}
+          </Text>
+          <IconButton icon="chevron-right" onPress={() => setSelectedDate((d) => shiftDate(d, 1))} />
+        </View>
+      )}
 
       {loading ? (
-        <ActivityIndicator style={styles.loader} />
+        <ActivityIndicator className="mt-10" />
       ) : (
         <FlatList
           data={isEmpty ? [] : timedRutas}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[styles.listContent, isWide && styles.listContentWide, isEmpty && styles.listContentEmpty]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+          contentContainerStyle={[
+            { padding: 12, paddingBottom: 96 },
+            isWide && { maxWidth: 900, alignSelf: 'center', width: '100%' },
+            isEmpty && { flexGrow: 1 },
+          ]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.primary} />}
           ListHeaderComponent={
             isEmpty ? null : (
               <>
                 {isWide && (
-                  <View style={styles.tableHeader}>
-                    <Text variant="labelSmall" style={styles.tableHeaderIconCol}> </Text>
-                    <Text variant="labelSmall" style={styles.tableHeaderMain}>Cliente / trayecto</Text>
-                    <Text variant="labelSmall" style={styles.tableHeaderPrice}>Precio</Text>
-                    <Text variant="labelSmall" style={styles.tableHeaderActions}>Acciones</Text>
+                  <View className="flex-row items-center px-1 pb-1.5 gap-3">
+                    <Text className="w-9 text-xs opacity-60"> </Text>
+                    <Text className="flex-1 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Cliente / trayecto</Text>
+                    <Text className="w-[70px] text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Precio</Text>
+                    <Text className="w-[72px] text-xs opacity-60 text-right text-onSurface dark:text-onSurface-dark">Acciones</Text>
                   </View>
                 )}
                 {noTimeRutas.length > 0 && (
-                  <View style={styles.noTimeSection}>
-                    <Text variant="labelLarge" style={styles.noTimeLabel}>Sin hora asignada</Text>
+                  <View className="mb-2">
+                    <Text className="mb-1.5 opacity-70 font-medium text-onSurface dark:text-onSurface-dark">Sin hora asignada</Text>
                     {noTimeRutas.map(renderRow)}
                   </View>
                 )}
@@ -236,9 +286,9 @@ export default function RutasPlanner({
             )
           }
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <IconButton icon="calendar-blank-outline" size={40} style={styles.emptyIcon} disabled />
-              <Text style={styles.emptyText}>{emptyMessage}</Text>
+            <View className="flex-1 items-center justify-center py-12">
+              <IconButton icon="calendar-blank-outline" size={40} disabled className="opacity-40" />
+              <Text className="text-center opacity-60 px-6 text-onSurface dark:text-onSurface-dark">{emptyMessage}</Text>
             </View>
           }
           renderItem={({ item }) => renderRow(item)}
@@ -248,7 +298,6 @@ export default function RutasPlanner({
       <FAB
         icon={createBlocked ? 'lock-outline' : 'plus'}
         label={createBlocked ? undefined : 'Nueva ruta'}
-        style={styles.fab}
         onPress={openCreate}
       />
 
@@ -273,35 +322,3 @@ export default function RutasPlanner({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  blockedBanner: { margin: 12, marginBottom: 0, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 },
-  blockedBannerText: { textAlign: 'center' },
-  dateBar: { flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingHorizontal: 4 },
-  dateLabel: { flex: 1, textTransform: 'capitalize', textAlign: 'center' },
-  loader: { marginTop: 40 },
-  listContent: { padding: 12, paddingBottom: 96 },
-  listContentWide: { maxWidth: 900, alignSelf: 'center', width: '100%' },
-  listContentEmpty: { flexGrow: 1 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 },
-  emptyIcon: { opacity: 0.4 },
-  emptyText: { textAlign: 'center', opacity: 0.6, paddingHorizontal: 24 },
-  tableHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, paddingBottom: 6, gap: 12 },
-  tableHeaderIconCol: { width: 36 },
-  tableHeaderMain: { flex: 1, opacity: 0.6 },
-  tableHeaderPrice: { width: 70, opacity: 0.6 },
-  tableHeaderActions: { width: 72, opacity: 0.6, textAlign: 'right' },
-  noTimeSection: { marginBottom: 8 },
-  noTimeLabel: { marginBottom: 6, opacity: 0.7 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
-  rowMain: { flex: 1, minWidth: 0 },
-  rowHeaderLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowTimeAndStatus: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  time: { fontVariant: ['tabular-nums'], opacity: 0.8 },
-  price: { fontWeight: '700' },
-  route: { marginTop: 2, opacity: 0.7 },
-  rowActions: { flexDirection: 'row' },
-  fab: { position: 'absolute', right: 16, bottom: 16 },
-});

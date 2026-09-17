@@ -13,9 +13,12 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "myRutas": "My Routes",
-    "myVehicles": "My Vehicles",
-    "driverMode": "As a Driver",
+    "dashboardAdmin": "Admin Dashboard",
+    "userDashboardAdmin": "User Dashboard",
+    "myRutas": "Routes by Day",
+    "rutasCalendar": "Routes Calendar",
+    "myVehicles": "Vehicles",
+    "driverMode": "Workday",
     "profile": "My Profile",
     "logout": "Log Out"
   },

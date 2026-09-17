@@ -1,17 +1,27 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { Text, Card, IconButton, FAB, Chip, ActivityIndicator, useTheme } from 'react-native-paper';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { Card, IconButton, FAB, Chip, PageContainer } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
 import { useConfirm } from '../context/ConfirmContext';
+import { useThemeMode } from '../context/ThemeModeContext';
+import { colors } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { useSelectedUser } from '../context/SelectedUserContext';
 import { toastSuccess, toastError } from '../utils/toast';
 import VehicleFormModal from '../components/VehicleFormModal';
+import SelectedUserBanner from '../components/SelectedUserBanner';
 
 export default function MyVehiclesScreen() {
-  const theme = useTheme();
   const { t } = useTranslation();
   const confirm = useConfirm();
+  const { resolvedScheme } = useThemeMode();
+  const themeColors = colors[resolvedScheme];
+  const { user, isAdmin } = useAuth();
+  const { selectedUser } = useSelectedUser();
+  const targetUser = isAdmin ? selectedUser : user;
+
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -20,9 +30,10 @@ export default function MyVehiclesScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async ({ silent = false } = {}) => {
+    if (!targetUser) return;
     if (!silent) setLoading(true);
     try {
-      const resp = await api.get('/vehicles');
+      const resp = await api.get('/vehicles', { params: isAdmin ? { owner_id: targetUser.id } : {} });
       setVehicles(resp.data);
     } catch (err) {
       toastError(errorMessage(err, 'No se pudieron cargar los vehículos'));
@@ -30,7 +41,7 @@ export default function MyVehiclesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isAdmin, targetUser?.id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -46,7 +57,7 @@ export default function MyVehiclesScreen() {
         await api.put(`/vehicles/${editingVehicle.id}`, payload);
         toastSuccess('Vehículo actualizado');
       } else {
-        await api.post('/vehicles', payload);
+        await api.post('/vehicles', isAdmin ? { ...payload, owner_id: targetUser.id } : payload);
         toastSuccess('Vehículo añadido');
       }
       setFormVisible(false);
@@ -76,47 +87,67 @@ export default function MyVehiclesScreen() {
     }
   };
 
+  if (isAdmin && !targetUser) {
+    return (
+      <View className="flex-1 bg-background dark:bg-background-dark">
+        <SelectedUserBanner />
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View className="flex-1 bg-background dark:bg-background-dark">
+      {isAdmin && <SelectedUserBanner />}
       {loading ? (
-        <ActivityIndicator style={styles.loader} />
+        <ActivityIndicator className="mt-10" />
       ) : (
-        <FlatList
-          data={vehicles}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[styles.listContent, vehicles.length === 0 && styles.listContentEmpty]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <IconButton icon="car-outline" size={40} style={styles.emptyIcon} disabled />
-              <Text style={styles.emptyText}>Aún no tienes vehículos.{'\n'}Añade uno para poder crear rutas.</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <Card style={styles.card} onPress={() => openEdit(item)}>
-              <Card.Content>
-                <View style={styles.cardHeader}>
-                  <Text variant="titleMedium" style={styles.cardHeaderTitle} numberOfLines={1}>{item.plate || 'Sin matrícula'}</Text>
-                  <Chip
-                    compact
-                    style={{ backgroundColor: item.active ? theme.colors.secondary : theme.colors.surfaceDisabled }}
-                    textStyle={styles.chipText}
-                  >
-                    {item.active ? 'Activo' : 'Inactivo'}
-                  </Chip>
-                </View>
-                <Text variant="bodyMedium">{[item.make, item.model].filter(Boolean).join(' ') || 'Sin marca/modelo'}</Text>
-              </Card.Content>
-              <Card.Actions>
-                <IconButton icon="pencil" onPress={() => openEdit(item)} />
-                <IconButton icon="delete" onPress={() => confirmDelete(item)} />
-              </Card.Actions>
-            </Card>
-          )}
-        />
+        <PageContainer className="flex-1">
+          <FlatList
+            data={vehicles}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={[{ padding: 12, paddingBottom: 96 }, vehicles.length === 0 && { flexGrow: 1 }]}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.primary} />}
+            ListEmptyComponent={
+              <View className="flex-1 items-center justify-center py-12">
+                <IconButton icon="car-outline" size={40} disabled className="opacity-40" />
+                <Text className="text-center opacity-60 px-6 text-onSurface dark:text-onSurface-dark">
+                  Aún no tienes vehículos.{'\n'}Añade uno para poder crear rutas.
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <Card className="mb-2.5" onPress={() => openEdit(item)}>
+                <Card.Content>
+                  <View className="flex-row justify-between items-center gap-2">
+                    <Text
+                      numberOfLines={1}
+                      className="flex-1 text-base font-medium text-onSurface dark:text-onSurface-dark"
+                    >
+                      {item.plate || 'Sin matrícula'}
+                    </Text>
+                    <Chip
+                      compact
+                      style={{ backgroundColor: item.active ? themeColors.secondary : themeColors.surfaceDisabled }}
+                      textClassName="text-white"
+                    >
+                      {item.active ? 'Activo' : 'Inactivo'}
+                    </Chip>
+                  </View>
+                  <Text className="text-sm text-onSurface dark:text-onSurface-dark">
+                    {[item.make, item.model].filter(Boolean).join(' ') || 'Sin marca/modelo'}
+                  </Text>
+                </Card.Content>
+                <Card.Actions>
+                  <IconButton icon="pencil" onPress={() => openEdit(item)} />
+                  <IconButton icon="delete" onPress={() => confirmDelete(item)} />
+                </Card.Actions>
+              </Card>
+            )}
+          />
+        </PageContainer>
       )}
 
-      <FAB icon="plus" label="Nuevo vehículo" style={styles.fab} onPress={openCreate} />
+      <FAB icon="plus" label="Nuevo vehículo" onPress={openCreate} />
 
       <VehicleFormModal
         visible={formVisible}
@@ -128,18 +159,3 @@ export default function MyVehiclesScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  loader: { marginTop: 40 },
-  listContent: { padding: 12, paddingBottom: 96 },
-  listContentEmpty: { flexGrow: 1 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 },
-  emptyIcon: { opacity: 0.4 },
-  emptyText: { textAlign: 'center', opacity: 0.6, paddingHorizontal: 24 },
-  card: { marginBottom: 10, borderRadius: 14 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  cardHeaderTitle: { flex: 1, minWidth: 0 },
-  chipText: { color: '#fff', fontSize: 12 },
-  fab: { position: 'absolute', right: 16, bottom: 16 },
-});

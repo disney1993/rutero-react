@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
-import { Portal, Modal, TextInput, Text, Button, useTheme } from 'react-native-paper';
+import { View, Text, FlatList, Pressable } from 'react-native';
+import { Input, Dialog, Button, cn } from './ui';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
@@ -8,7 +8,6 @@ const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '
 // Selector de hora en incrementos de 5 minutos (no todas las rutas son en
 // punto: 10:05, 10:45...) sin depender de ninguna librería nueva.
 export default function TimePickerField({ label, value, onChange, error }) {
-  const theme = useTheme();
   const [visible, setVisible] = useState(false);
   const [hour, setHour] = useState('08');
   const [minute, setMinute] = useState('00');
@@ -31,68 +30,69 @@ export default function TimePickerField({ label, value, onChange, error }) {
 
   return (
     <>
-      <TextInput
-        mode="outlined"
-        label={label}
-        value={value || ''}
-        editable={false}
-        onPressIn={() => setVisible(true)}
-        right={<TextInput.Icon icon="clock-outline" onPress={() => setVisible(true)} />}
-        error={error}
-        style={styles.input}
-      />
+      <Pressable onPress={() => setVisible(true)}>
+        <Input
+          label={label}
+          value={value || ''}
+          editable={false}
+          pointerEvents="none"
+          right="clock-outline"
+          onRightPress={() => setVisible(true)}
+          error={error}
+        />
+      </Pressable>
 
-      <Portal>
-        <Modal visible={visible} onDismiss={() => setVisible(false)} contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.surface }]}>
-          <Text variant="titleMedium" style={styles.title}>Elegir hora</Text>
-          <View style={styles.columns}>
-            <FlatList
-              data={HOURS}
-              keyExtractor={(h) => h}
-              style={styles.column}
-              renderItem={({ item }) => (
-                <Text
-                  style={[styles.option, item === hour && { backgroundColor: theme.colors.primaryContainer, color: theme.colors.onPrimaryContainer }]}
-                  onPress={() => setHour(item)}
-                >
-                  {item}
-                </Text>
-              )}
-            />
-            <Text style={styles.colon}>:</Text>
-            <FlatList
-              data={MINUTES}
-              keyExtractor={(m) => m}
-              style={styles.column}
-              renderItem={({ item }) => (
-                <Text
-                  style={[styles.option, item === minute && { backgroundColor: theme.colors.primaryContainer, color: theme.colors.onPrimaryContainer }]}
-                  onPress={() => setMinute(item)}
-                >
-                  {item}
-                </Text>
-              )}
-            />
-          </View>
-          <Button onPress={useNow} style={styles.nowButton}>Ahora</Button>
-          <View style={styles.actions}>
-            <Button onPress={() => setVisible(false)}>Cancelar</Button>
-            <Button mode="contained" onPress={confirm}>Aceptar</Button>
-          </View>
-        </Modal>
-      </Portal>
+      <Dialog visible={visible} onDismiss={() => setVisible(false)}>
+        <Text className="mb-3 text-center text-base font-medium text-onSurface dark:text-onSurface-dark">
+          Elegir hora
+        </Text>
+        <View className="flex-row justify-center flex-1">
+          <FlatList
+            data={HOURS}
+            keyExtractor={(h) => h}
+            style={{ width: 70, maxHeight: 220 }}
+            renderItem={({ item }) => (
+              <Text
+                onPress={() => setHour(item)}
+                className={cn(
+                  'text-center py-2.5 rounded-lg',
+                  item === hour
+                    ? 'bg-primary dark:bg-primary-dark text-white'
+                    : 'text-onSurface dark:text-onSurface-dark'
+                )}
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {item}
+              </Text>
+            )}
+          />
+          <Text className="text-xl self-center mx-1 text-onSurface dark:text-onSurface-dark">:</Text>
+          <FlatList
+            data={MINUTES}
+            keyExtractor={(m) => m}
+            style={{ width: 70, maxHeight: 220 }}
+            renderItem={({ item }) => (
+              <Text
+                onPress={() => setMinute(item)}
+                className={cn(
+                  'text-center py-2.5 rounded-lg',
+                  item === minute
+                    ? 'bg-primary dark:bg-primary-dark text-white'
+                    : 'text-onSurface dark:text-onSurface-dark'
+                )}
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {item}
+              </Text>
+            )}
+          />
+        </View>
+        <Button mode="text" onPress={useNow} className="mt-2 self-center">Ahora</Button>
+        <View className="flex-row justify-end gap-2 mt-3">
+          <Button mode="text" onPress={() => setVisible(false)}>Cancelar</Button>
+          <Button mode="contained" onPress={confirm}>Aceptar</Button>
+        </View>
+      </Dialog>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  input: { marginBottom: 4 },
-  modal: { margin: 20, borderRadius: 16, padding: 16, maxHeight: '70%' },
-  title: { marginBottom: 12, textAlign: 'center' },
-  columns: { flexDirection: 'row', justifyContent: 'center', flex: 1 },
-  column: { width: 70, maxHeight: 220 },
-  colon: { fontSize: 22, alignSelf: 'center', marginHorizontal: 4 },
-  option: { textAlign: 'center', paddingVertical: 10, borderRadius: 8, fontVariant: ['tabular-nums'] },
-  nowButton: { marginTop: 8, alignSelf: 'center' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-});
