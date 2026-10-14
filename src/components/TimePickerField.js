@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Input, Dialog, Button, cn } from './ui';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -8,6 +9,7 @@ const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '
 // Selector de hora en incrementos de 5 minutos (no todas las rutas son en
 // punto: 10:05, 10:45...) sin depender de ninguna librería nueva.
 export default function TimePickerField({ label, value, onChange, error }) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [hour, setHour] = useState('08');
   const [minute, setMinute] = useState('00');
@@ -44,7 +46,7 @@ export default function TimePickerField({ label, value, onChange, error }) {
 
       <Dialog visible={visible} onDismiss={() => setVisible(false)}>
         <Text className="mb-3 text-center text-base font-medium text-onSurface dark:text-onSurface-dark">
-          Elegir hora
+          {t('timePicker.title')}
         </Text>
         <View className="flex-row justify-center flex-1">
           <FlatList
@@ -87,10 +89,10 @@ export default function TimePickerField({ label, value, onChange, error }) {
             )}
           />
         </View>
-        <Button mode="text" onPress={useNow} className="mt-2 self-center">Ahora</Button>
+        <Button mode="text" onPress={useNow} className="mt-2 self-center">{t('timePicker.now')}</Button>
         <View className="flex-row justify-end gap-2 mt-3">
-          <Button mode="text" onPress={() => setVisible(false)}>Cancelar</Button>
-          <Button mode="contained" onPress={confirm}>Aceptar</Button>
+          <Button mode="text" onPress={() => setVisible(false)}>{t('common.cancel')}</Button>
+          <Button mode="contained" onPress={confirm}>{t('common.accept')}</Button>
         </View>
       </Dialog>
     </>

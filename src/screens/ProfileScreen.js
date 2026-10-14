@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { getInitials, getRandomAvatarColor, AVATAR_PALETTE } from '../utils/avatar';
 import { isValidName, isValidEmail, isValidPassword } from '../utils/validators';
 import { toastSuccess, toastError } from '../utils/toast';
+import { DEFAULT_PRICE_PER_KM } from '../utils/currency';
+import TaxiTariffReference from '../components/TaxiTariffReference';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -207,7 +209,7 @@ export default function ProfileScreen() {
           <SegmentedButtons
             value={currency}
             onValueChange={changeCurrency}
-            buttons={[{ value: 'EUR', label: 'Euro (€)' }, { value: 'USD', label: 'Dólar ($)' }]}
+            buttons={[{ value: 'EUR', label: t('profile.currencyEur') }, { value: 'USD', label: t('profile.currencyUsd') }]}
             className="mb-1"
           />
           {savingCurrency && <ActivityIndicator size="small" className="mb-2" />}
@@ -219,6 +221,15 @@ export default function ProfileScreen() {
             keyboardType="numeric"
             error={pricingError}
           />
+          {!pricePerKm && (
+            <Text className="text-xs mt-1 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+              {t('profile.defaultPriceHint', { price: DEFAULT_PRICE_PER_KM.toFixed(2) })}
+            </Text>
+          )}
+
+          {currency === 'EUR' && (
+            <TaxiTariffReference onUse={(value) => setPricePerKm(String(value))} />
+          )}
 
           <Button mode="contained" onPress={savePricing} loading={savingPricing} disabled={savingPricing || !pricingDirty || !pricingValid} className="mt-3">
             {t('profile.savePreferences')}

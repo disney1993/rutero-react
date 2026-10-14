@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
+import { useTranslation } from 'react-i18next';
 import { Card, StatTile, StatusBadge } from './ui';
 import { api, errorMessage } from '../utils/apiClient';
 import { toastError } from '../utils/toast';
@@ -14,6 +15,7 @@ import { formatCurrency } from '../utils/currency';
 // como el admin (con userId, ve lo de quien elija) — mismo componente,
 // mismo endpoint /reports/user-summary, solo cambia el alcance.
 export default function UserStatsDashboard({ userId, reloadKey = 0 }) {
+  const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   const [summary, setSummary] = useState(null);
@@ -25,7 +27,7 @@ export default function UserStatsDashboard({ userId, reloadKey = 0 }) {
       const resp = await api.get('/reports/user-summary', { params: userId ? { user_id: userId } : {} });
       setSummary(resp.data);
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo cargar el resumen'));
+      toastError(errorMessage(err, t('stats.loadError')));
     } finally {
       setLoading(false);
     }
@@ -47,23 +49,23 @@ export default function UserStatsDashboard({ userId, reloadKey = 0 }) {
   return (
     <View>
       <View className="flex-row flex-wrap gap-2 mb-3">
-        <StatTile label="Rutas" value={summary.rutas_total} />
-        <StatTile label="Vehículos" value={summary.vehicles_total} />
-        <StatTile label="Ingresos (completadas)" value={formatCurrency(summary.revenue_completed)} />
+        <StatTile label={t('stats.rutas')} value={summary.rutas_total} />
+        <StatTile label={t('stats.vehicles')} value={summary.vehicles_total} />
+        <StatTile label={t('stats.revenue')} value={formatCurrency(summary.revenue_completed)} />
       </View>
 
       <View className="flex-row flex-wrap gap-1.5 mb-3">
-        {summary.has_owner_capability && <StatusBadge tone="secondary">Propietario</StatusBadge>}
-        {summary.has_driver_capability && <StatusBadge tone="tertiary">Conductor</StatusBadge>}
+        {summary.has_owner_capability && <StatusBadge tone="secondary">{t('roles.owner')}</StatusBadge>}
+        {summary.has_driver_capability && <StatusBadge tone="tertiary">{t('roles.driver')}</StatusBadge>}
         {!summary.has_owner_capability && !summary.has_driver_capability && (
-          <StatusBadge tone="neutral">Sin actividad</StatusBadge>
+          <StatusBadge tone="neutral">{t('stats.noActivity')}</StatusBadge>
         )}
       </View>
 
       {pieData.length > 0 && (
         <Card>
           <Card.Content className="items-center">
-            <Text className="self-start font-medium mb-2 text-onSurface dark:text-onSurface-dark">Rutas por estado</Text>
+            <Text className="self-start font-medium mb-2 text-onSurface dark:text-onSurface-dark">{t('stats.rutasByStatus')}</Text>
             <PieChart data={pieData} donut radius={70} innerRadius={44} innerCircleColor={themeColors.surface} />
             <View className="flex-row flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
               {activeStatuses.map((status) => (

@@ -9,6 +9,13 @@ Cliente en React Native (Expo) para **Rutero**, una app para propietarios de veh
 - **Como conductor**: introduciendo el código mensual de un propietario, el conductor ve y gestiona las rutas que le asigna o crea para ese propietario, sin acceso a sus informes de ingresos.
 - **Panel de administración** (rol `admin`): búsqueda y edición de usuarios, gestión de sus vehículos y rutas, e informes agregados.
 - **Perfil**: datos personales, color de avatar, precio por km/moneda por defecto, tema claro/oscuro/sistema e idioma (español/inglés).
+- **Cierre automático de viajes**: el cron de la API marca cada viaje como completado y pagado en efectivo cuando empieza el siguiente viaje o, como tarde, a la hora de fin estimada: inicio + espera inicial (10 min) + duración por carretera + 10 % por tráfico + 5 min de bajada y cobro. La app avisa de ello de varias formas:
+  - en el formulario de ruta indica a qué hora se completará el viaje;
+  - en la jornada muestra "Se completará sola hacia las…";
+  - la primera vez explica el funcionamiento en un diálogo;
+  - al cerrarse un viaje muestra un aviso **solo informativo** (sin botones, sonido ni vibración; se oculta en 6 s), para no invitar a tocar el móvil al volante.
+
+  Las correcciones se hacen en **«Por revisar»** (marcar como correcto, corregir o deshacer), con el vehículo detenido. Los márgenes se configuran, o se desactiva el cierre, en **Ajustes**. La jornada abierta se refresca cada minuto.
 
 El backend (API REST con Sanctum) está en [`rutero-api`](../rutero-api), en el mismo entorno Laragon.
 
@@ -39,9 +46,9 @@ npm run web
 También puedes usar:
 
 ```powershell
-npm run start   # abre el bundler de Expo; escanea el QR con Expo Go en el móvil
-npm run android # requiere Android Studio / emulador o dispositivo conectado
-npm run ios     # requiere macOS + Xcode
+npm run start   # abre el bundler de Expo; escanea el QR con Expo Go (SDK 57) en el móvil
+npm run android # abre la app en Expo Go del emulador/dispositivo Android conectado
+npm run ios     # abre la app en Expo Go del simulador iOS (macOS)
 ```
 
 ## Ejecutar la API (rutero-api)
@@ -58,7 +65,9 @@ Más detalles (instalación, migraciones, seeders, endpoints) en [`rutero-api/RE
 ## Stack
 
 - UI: `react-native-paper` (Material Design), tema claro/oscuro
-- Navegación: `@react-navigation/native` + `native-stack` + `drawer`
+- Expo SDK 57 (React Native nueva arquitectura) + NativeWind 4
+- Navegación: `@react-navigation/native` 7 + `bottom-tabs` (barra estilo Instagram) + `native-stack` por pestaña
+- Respuesta háptica: `expo-haptics` (desactivable en Ajustes)
 - Calendario: `react-native-calendars`
 - i18n: `i18next` / `react-i18next` (español/inglés)
 - Notificaciones: `react-native-flash-message`
@@ -73,7 +82,7 @@ El backend soporta roles `admin`, `owner` (propietario) y `driver` (conductor).
 
 ## Integración con backend
 
-- `apiBase` apunta por defecto a `http://127.0.0.1:8000` — revisa `src/utils/apiClient.js` si cambias el host/puerto de la API.
+- `apiBase` apunta por defecto a `http://127.0.0.1:8000`; en desarrollo, en móvil/emulador se sustituye automáticamente por la IP del PC que sirve Metro — revisa `src/utils/apiClient.js` si cambias el host/puerto de la API.
 - Endpoints principales usados: `/api/register`, `/api/login`, `/api/auth/google/mobile`, `/api/rutas`, `/api/vehicles`, `/api/owner/codes`, `/api/driver/join-code`, `/api/geocode/*`, `/api/admin/*`.
 
 ## Configuración de Google Sign-In (opcional)

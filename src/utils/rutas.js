@@ -1,8 +1,10 @@
-export const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'completed', label: 'Completado' },
-  { value: 'cancelled', label: 'Cancelado' },
-];
+import i18n, { dateLocale } from '../i18n';
+
+// `label` es un getter: se traduce al leerlo, con el idioma activo.
+export const STATUS_OPTIONS = ['pending', 'completed', 'cancelled'].map((value) => ({
+  value,
+  get label() { return i18n.t(`status.${value}`); },
+}));
 
 export const STATUS_COLORS = {
   pending: '#FFA726',
@@ -37,7 +39,7 @@ export function shiftDate(iso, deltaDays) {
 
 export function formatDateHuman(iso) {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  return d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 export const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;

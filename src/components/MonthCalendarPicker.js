@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Dialog, Button, Menu } from './ui';
+import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { api } from '../utils/apiClient';
-import { MONTH_NAMES, MIN_YEAR, MAX_YEAR, monthRange, partsFromISO, ymd } from '../utils/schedule';
+import { monthNames, MIN_YEAR, MAX_YEAR, monthRange, partsFromISO, ymd } from '../utils/schedule';
 import { todayISO } from '../utils/rutas';
+import { useCalendarTheme } from '../utils/calendarTheme';
 
 const YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i);
 
@@ -14,8 +16,10 @@ const YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR
 // según el mes) para elegir un día concreto. Rango permitido: desde enero
 // de este año hasta 10 años en el futuro.
 export default function MonthCalendarPicker({ visible, onDismiss, onSelectDate, selectedDate, fetchParams }) {
+  const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const primaryColor = colors[resolvedScheme].primary;
+  const calendarTheme = useCalendarTheme();
   const initial = partsFromISO(selectedDate);
   const [year, setYear] = useState(initial.year);
   const [month, setMonth] = useState(initial.month);
@@ -63,9 +67,9 @@ export default function MonthCalendarPicker({ visible, onDismiss, onSelectDate, 
         <Menu
           visible={monthMenuVisible}
           onDismiss={() => setMonthMenuVisible(false)}
-          anchor={<Button mode="outlined" onPress={() => setMonthMenuVisible(true)}>{MONTH_NAMES[month - 1]}</Button>}
+          anchor={<Button mode="outlined" onPress={() => setMonthMenuVisible(true)}>{monthNames()[month - 1]}</Button>}
         >
-          {MONTH_NAMES.map((name, idx) => (
+          {monthNames().map((name, idx) => (
             <Menu.Item key={name} title={name} onPress={() => { setMonth(idx + 1); setMonthMenuVisible(false); }} />
           ))}
         </Menu>
@@ -82,7 +86,9 @@ export default function MonthCalendarPicker({ visible, onDismiss, onSelectDate, 
       </View>
 
       <Calendar
-        key={`${year}-${month}`}
+        key={`${calendarTheme.scheme}-${year}-${month}`}
+        theme={calendarTheme.theme}
+        firstDay={1}
         current={ymd(year, month, 1)}
         minDate={ymd(MIN_YEAR, 1, 1)}
         maxDate={ymd(MAX_YEAR, 12, 31)}
@@ -95,7 +101,7 @@ export default function MonthCalendarPicker({ visible, onDismiss, onSelectDate, 
 
       <View className="flex-row justify-center mt-3">
         <Button mode="text" onPress={() => { onSelectDate(todayISO()); onDismiss(); }}>
-          Ir a hoy
+          {t('calendar.goToday')}
         </Button>
       </View>
     </Dialog>

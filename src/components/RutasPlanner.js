@@ -1,59 +1,116 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, useWindowDimensions, RefreshControl, Pressable, ActivityIndicator, Linking } from 'react-native';
-import { Avatar, IconButton, FAB, Menu, getPaymentMethod, getPaymentMethodColor, PAYMENT_METHODS, CAR_COLOR_PALETTE } from './ui';
-import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Icon, IconButton, FAB, Menu, Dialog, Button, StatusBadge, SwipeToDelete, VehicleTypeIcon, carColorToHex, getPaymentMethod, getPaymentMethodColor, PAYMENT_METHODS } from './ui';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { api, errorMessage } from '../utils/apiClient';
 import { STATUS_COLORS, STATUS_OPTIONS, shiftDate, formatDateHuman, todayISO, getDriverPermissions } from '../utils/rutas';
 import { rutaHour } from '../utils/schedule';
 import { formatCurrency } from '../utils/currency';
-import { getVehicleSwatchColor } from '../utils/avatar';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
-import { toastSuccess, toastError } from '../utils/toast';
+import { toastSuccess, toastError, toastInfo } from '../utils/toast';
+import { haptics } from '../utils/haptics';
+import { useSwipeHint } from '../utils/swipeHint';
 import RutaFormModal from './RutaFormModal';
 import MonthCalendarPicker from './MonthCalendarPicker';
+import AutoCompleteNotice from './AutoCompleteNotice';
+import AutoCompleteReviewModal from './AutoCompleteReviewModal';
+import { autoCompleteEnabled, formatEta } from '../utils/autoComplete';
+
+// Cada cuánto se refresca la jornada abierta para reflejar los cierres
+// automáticos que hace el cron del servidor.
+const POLL_MS = 60000;
+const SEEN_KEY = 'rutero.autoCompleteSeen';
+const INTRO_KEY = 'rutero.autoCompleteIntroSeen';
 
 function callClient(phone) {
-  Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => toastError('No se pudo abrir la app de llamadas'));
+  Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => toastError(i18n.t('planner.callError')));
 }
 
 function whatsAppClient(phone) {
   const digits = phone.replace(/\D/g, '');
-  Linking.openURL(`https://wa.me/${digits}`).catch(() => toastError('No se pudo abrir WhatsApp'));
+  Linking.openURL(`https://wa.me/${digits}`).catch(() => toastError(i18n.t('planner.whatsappError')));
 }
 
 // Fila compacta tipo tabla: icono del coche | hora + cliente + precio |
 // trayecto. El estado y el método de pago se pueden cambiar aquí mismo
 // (tocando el punto/la insignia) sin abrir el formulario completo; el resto
 // de detalles (teléfono, notas, distancia...) se ven al tocar la fila.
-function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, user, canEdit, canDelete, onEdit, onDelete, onQuickUpdate }) {
+// Acción rápida a todo lo alto de la fila (WhatsApp / llamar): columnas
+// grandes para no tener que apuntar, sin abrir el detalle del viaje.
+// En móvil solo el icono; en tablet/escritorio (showLabel) también el texto.
+function QuickAction({ icon, label, color, onPress, showLabel }) {
+  return (
+    <Pressable
+      onPress={() => { haptics.light(); onPress(); }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      android_ripple={{ color: `${color}40` }}
+      style={{ backgroundColor: `${color}1A` }}
+      className={`${showLabel ? 'w-[72px]' : 'w-[52px]'} items-center justify-center border-l border-border dark:border-border-dark active:opacity-70`}
+    >
+      <Icon name={icon} size={24} color={color} />
+      {showLabel && <Text style={{ color }} className="mt-0.5 text-[10px] font-semibold">{label}</Text>}
+    </Pressable>
+  );
+}
+
+function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, user, canDelete, onEdit, onDelete, onQuickUpdate, onSwiped, peek, onPeekDone, isWide, onRestore }) {
+  const { t } = useTranslation();
+  // Viaje eliminado (borrado blando): se ve atenuado y tachado; tocarlo ofrece restaurarlo.
+  const isDeleted = !!item.deleted_at;
   const [statusMenuVisible, setStatusMenuVisible] = useState(false);
   const [paymentMenuVisible, setPaymentMenuVisible] = useState(false);
 
   const vehicle = vehicles.find((v) => v.id === item.vehicle_id);
-  const vehicleColor = getVehicleSwatchColor(vehicle, CAR_COLOR_PALETTE);
-  const dayTag = item.trip_date === prevDate ? 'ayer' : item.trip_date === nextDate ? 'mañana' : null;
+  const paint = carColorToHex(vehicle?.color);
+  const dayTag = item.trip_date === prevDate ? t('planner.yesterday') : item.trip_date === nextDate ? t('planner.tomorrow') : null;
   const price = item.final_price ?? item.estimated_price;
   const paymentMethod = item.payment_method ? getPaymentMethod(item.payment_method) : null;
   const completerName = item.completer
     ? `${item.completer.first_name || ''} ${item.completer.last_name || ''}`.trim()
     : null;
-  const canChangeStatusPayment = getDriverPermissions(item, user).canChangeStatusPayment;
+  const canChangeStatusPayment = !isDeleted && getDriverPermissions(item, user).canChangeStatusPayment;
 
+  // Tocar la fila abre el detalle (edición); deslizar a la izquierda borra
+  // (o enseña un candado si no hay permiso); WhatsApp y llamar son columnas
+  // propias a la derecha.
   return (
-    <Pressable
-      onPress={() => onEdit(item)}
-      style={({ pressed }) => [pressed && { backgroundColor: themeColors.surfaceDisabled }]}
-      className="flex-row items-center gap-3 py-2.5 border-b border-border dark:border-border-dark"
+    <SwipeToDelete
+      rounded={false}
+      enabled={!isDeleted}
+      onDelete={() => onDelete(item)}
+      blockedReason={canDelete ? null : t('planner.cannotDelete')}
+      onBlocked={toastInfo}
+      onSwiped={onSwiped}
+      peek={peek}
+      onPeekDone={onPeekDone}
     >
-      <Avatar.Icon
-        icon={item.vehicle_id ? 'car' : 'car-off'}
-        size={36}
-        style={{ backgroundColor: vehicleColor || themeColors.surfaceDisabled }}
-      />
+    <View className="flex-row items-stretch bg-background dark:bg-background-dark border-b border-border dark:border-border-dark">
+    <Pressable
+      onPress={() => { haptics.light(); if (isDeleted) onRestore(item); else onEdit(item); }}
+      android_ripple={{ color: themeColors.border }}
+      style={({ pressed }) => [pressed && { backgroundColor: themeColors.surfaceDisabled }]}
+      className={`flex-1 flex-row items-center gap-3 py-2.5 pr-2 ${isDeleted ? 'opacity-50' : ''}`}
+    >
+      <View className="w-12 h-9 rounded-lg items-center justify-center bg-surface dark:bg-surface-dark">
+        {vehicle ? (
+          <VehicleTypeIcon
+            type={vehicle.vehicle_type}
+            size={40}
+            color={paint || themeColors.primary}
+            cutoutColor={themeColors.surface}
+            outlineColor={paint ? themeColors.onSurface : undefined}
+          />
+        ) : (
+          <Icon name="car-off" size={20} color={themeColors.onSurfaceVariant} />
+        )}
+      </View>
       <View className="flex-1 min-w-0">
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center gap-1.5">
@@ -79,6 +136,7 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
             <Text style={{ fontVariant: ['tabular-nums'] }} className="opacity-80 text-xs text-onSurface dark:text-onSurface-dark">
               {item.trip_time}{dayTag ? ` (${dayTag})` : ''}
             </Text>
+            {isDeleted && <StatusBadge tone="error">{t('planner.deletedBadge')}</StatusBadge>}
             <Menu
               visible={paymentMenuVisible}
               onDismiss={() => setPaymentMenuVisible(false)}
@@ -90,7 +148,7 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
                     </View>
                   ) : canChangeStatusPayment ? (
                     <View className="rounded px-1 py-0.5 border border-dashed border-border dark:border-border-dark">
-                      <Text className="text-onSurfaceVariant dark:text-onSurfaceVariant-dark text-[9px]">Pago</Text>
+                      <Text className="text-onSurfaceVariant dark:text-onSurfaceVariant-dark text-[9px]">{t('planner.payment')}</Text>
                     </View>
                   ) : null}
                 </Pressable>
@@ -106,7 +164,7 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
                 />
               ))}
               {!!item.payment_method && (
-                <Menu.Item title="Quitar" onPress={() => { setPaymentMenuVisible(false); onQuickUpdate(item, { payment_method: null }); }} />
+                <Menu.Item title={t('common.remove')} onPress={() => { setPaymentMenuVisible(false); onQuickUpdate(item, { payment_method: null }); }} />
               )}
             </Menu>
           </View>
@@ -116,23 +174,40 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
             </Text>
           )}
         </View>
-        <Text numberOfLines={1} className="text-onSurface dark:text-onSurface-dark">{item.client_name}</Text>
+        <Text numberOfLines={1} style={isDeleted ? { textDecorationLine: 'line-through' } : undefined} className="text-onSurface dark:text-onSurface-dark">{item.client_name}</Text>
         <Text numberOfLines={1} className="mt-0.5 opacity-70 text-xs text-onSurface dark:text-onSurface-dark">
           {item.origin} → {item.destination}
         </Text>
         {item.status === 'completed' && completerName && (
           <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] italic text-onSurface dark:text-onSurface-dark">
-            Completado por: {completerName}
+            {t('planner.completedBy', { name: completerName })}
+          </Text>
+        )}
+        {item.status === 'pending' && !!item.auto_complete_eta && (
+          <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] text-onSurface dark:text-onSurface-dark">
+            {t('planner.willComplete', { time: formatEta(item.auto_complete_eta, item.trip_date) })}
+          </Text>
+        )}
+        {item.needs_review && (
+          <View className="mt-1">
+            <StatusBadge tone="tertiary">{t('review.autoCompleted')} · {t('planner.toReview')}</StatusBadge>
+          </View>
+        )}
+        {item.auto_completed && !item.needs_review && (
+          <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] italic text-onSurface dark:text-onSurface-dark">
+            {t('review.autoCompleted')}
           </Text>
         )}
       </View>
-      <View className="flex-row">
-        {!!item.client_phone && <IconButton icon="whatsapp" size={16} onPress={() => whatsAppClient(item.client_phone)} />}
-        {!!item.client_phone && <IconButton icon="phone" size={16} onPress={() => callClient(item.client_phone)} />}
-        {canEdit && <IconButton icon="pencil" size={16} onPress={() => onEdit(item)} />}
-        {canDelete && <IconButton icon="delete" size={16} onPress={() => onDelete(item)} />}
-      </View>
     </Pressable>
+    {!!item.client_phone && (
+      <>
+        <QuickAction icon="whatsapp" label="WhatsApp" color="#25D366" showLabel={isWide} onPress={() => whatsAppClient(item.client_phone)} />
+        <QuickAction icon="phone" label={t('planner.call')} color={themeColors.primary} showLabel={isWide} onPress={() => callClient(item.client_phone)} />
+      </>
+    )}
+    </View>
+    </SwipeToDelete>
   );
 }
 
@@ -147,7 +222,7 @@ export default function RutasPlanner({
   canDelete = () => true,
   editFieldSet = () => 'full',
   vehicles = [],
-  emptyMessage = 'No hay rutas este día',
+  emptyMessage,
   createBlocked = false,
   createBlockedMessage = '',
   onCreateBlockedPress,
@@ -187,13 +262,70 @@ export default function RutasPlanner({
   const [formVisible, setFormVisible] = useState(false);
   const [editingRuta, setEditingRuta] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const navigation = useNavigation();
+  const [reviewRutas, setReviewRutas] = useState([]);
+  const [reviewVisible, setReviewVisible] = useState(false);
+  const [reviewBusyId, setReviewBusyId] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [introVisible, setIntroVisible] = useState(false);
+  const hideNotice = useCallback(() => setNotice(null), []);
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
+  // Viajes cerrados por el cron y sin revisar (de cualquier fecha). Si hay
+  // alguno que este dispositivo aún no había visto, se muestra el aviso
+  // informativo, una sola vez por viaje.
+  const loadReview = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { date, date_from, date_to, ...scope } = fetchParams;
+      // Un admin sin usuario seleccionado vería los cierres de toda la plataforma.
+      if (user.is_admin && !scope.user_id) {
+        setReviewRutas([]);
+        return;
+      }
+      const resp = await api.get('/rutas', { params: { ...scope, needs_review: 1 } });
+      const pending = resp.data.data.filter(filterRuta);
+      setReviewRutas(pending);
+
+      const seenKey = `${SEEN_KEY}.${user.id}`;
+      let seen = [];
+      try {
+        seen = JSON.parse((await AsyncStorage.getItem(seenKey)) || '[]');
+      } catch (e) {
+        seen = [];
+      }
+      const fresh = pending.filter((r) => !seen.includes(r.id));
+      if (fresh.length > 0) {
+        if (fresh.length === 1) {
+          const r = fresh[0];
+          const method = getPaymentMethod(r.payment_method);
+          const price = r.final_price ?? r.estimated_price;
+          setNotice({
+            title: t('planner.noticeOne', { time: r.trip_time || '--:--' }),
+            detail: [r.client_name, method?.label, price != null ? formatCurrency(price, currency) : null].filter(Boolean).join(' · '),
+          });
+        } else {
+          setNotice({ title: t('planner.noticeMany', { count: fresh.length }), detail: t('planner.noticeManyDetail') });
+        }
+        const nextSeen = [...seen, ...fresh.map((r) => r.id)].slice(-500);
+        AsyncStorage.setItem(seenKey, JSON.stringify(nextSeen)).catch(() => {});
+      }
+    } catch (err) {
+      // Silencioso: es una comprobación de fondo y no debe distraer con errores.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, currency, JSON.stringify(fetchParams)]);
+
+  // "background": refresco periódico mientras la pantalla está abierta. No
+  // muestra spinners ni toasts de error para no reclamar la atención de
+  // quien puede estar conduciendo.
+  const load = useCallback(async ({ silent = false, background = false } = {}) => {
+    if (!silent && !background) setLoading(true);
+    loadReview();
     try {
       const dateFrom = shiftDate(selectedDate, -1);
       const dateTo = shiftDate(selectedDate, 1);
-      const resp = await api.get('/rutas', { params: { date_from: dateFrom, date_to: dateTo, ...fetchParams } });
+      // with_deleted: los eliminados se muestran atenuados para poder restaurarlos.
+      const resp = await api.get('/rutas', { params: { date_from: dateFrom, date_to: dateTo, with_deleted: 1, ...fetchParams } });
       // La API devuelve trip_date como timestamp ISO completo (p.ej.
       // "2026-09-19T00:00:00.000000Z"), pero aquí se compara contra fechas
       // "YYYY-MM-DD" (selectedDate, prevDate, nextDate) — hay que recortarlo
@@ -201,15 +333,80 @@ export default function RutasPlanner({
       const normalized = resp.data.data.map((r) => ({ ...r, trip_date: r.trip_date?.slice(0, 10) }));
       setRutas(normalized.filter(filterRuta));
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudieron cargar las rutas'));
+      if (!background) toastError(errorMessage(err, t('planner.loadError')));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, JSON.stringify(fetchParams)]);
+  }, [selectedDate, JSON.stringify(fetchParams), loadReview]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    const timer = setInterval(() => load({ background: true }), POLL_MS);
+    return () => clearInterval(timer);
+  }, [load]));
+
+  // Explicación única de que los viajes se completan solos.
+  useEffect(() => {
+    if (!user || !autoCompleteEnabled(user)) return;
+    AsyncStorage.getItem(INTRO_KEY)
+      .then((v) => { if (!v) setIntroVisible(true); })
+      .catch(() => {});
+  }, [user?.id]);
+
+  const closeIntro = (goToSettings = false) => {
+    setIntroVisible(false);
+    AsyncStorage.setItem(INTRO_KEY, '1').catch(() => {});
+    if (goToSettings) navigation.navigate('Account', { screen: 'Settings', initial: false });
+  };
+
+  const markReviewed = async (ruta) => {
+    setReviewBusyId(ruta.id);
+    try {
+      await api.post(`/rutas/${ruta.id}/review`);
+      setReviewRutas((prev) => prev.filter((r) => r.id !== ruta.id));
+      load({ silent: true });
+    } catch (err) {
+      toastError(errorMessage(err, t('planner.reviewError')));
+    } finally {
+      setReviewBusyId(null);
+    }
+  };
+
+  const markAllReviewed = async (list) => {
+    setReviewBusyId('all');
+    try {
+      await Promise.all(list.map((r) => api.post(`/rutas/${r.id}/review`)));
+      setReviewVisible(false);
+      load({ silent: true });
+    } catch (err) {
+      toastError(errorMessage(err, t('planner.reviewAllError')));
+      loadReview();
+    } finally {
+      setReviewBusyId(null);
+    }
+  };
+
+  // Deshacer: el viaje vuelve a pendiente y el cron ya no lo vuelve a cerrar.
+  const undoAutoComplete = async (ruta) => {
+    setReviewBusyId(ruta.id);
+    try {
+      await api.put(`/rutas/${ruta.id}`, { status: 'pending' });
+      setReviewRutas((prev) => prev.filter((r) => r.id !== ruta.id));
+      toastSuccess(t('planner.undone'));
+      load({ silent: true });
+    } catch (err) {
+      toastError(errorMessage(err, t('planner.undoError')));
+    } finally {
+      setReviewBusyId(null);
+    }
+  };
+
+  const editFromReview = (ruta) => {
+    setReviewVisible(false);
+    openEdit({ ...ruta, trip_date: ruta.trip_date?.slice(0, 10) });
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -236,10 +433,32 @@ export default function RutasPlanner({
 
   const isEmpty = noTimeRutas.length === 0 && timedRutas.length === 0;
 
+  // Pista del gesto de borrar (igual que en Vehículos): al entrar, la primera
+  // fila que se puede eliminar se asoma sola; máx. 3 veces o hasta que el
+  // usuario deslice alguna.
+  const swipeHint = useSwipeHint('rutero.rutaSwipeHint');
+  const [peekId, setPeekId] = useState(null);
+  const hintPendingRef = useRef(false);
+  useFocusEffect(useCallback(() => {
+    hintPendingRef.current = true;
+    return () => { hintPendingRef.current = false; setPeekId(null); };
+  }, []));
+  useEffect(() => {
+    if (!hintPendingRef.current || loading || !swipeHint.ready) return;
+    const rows = [...noTimeRutas, ...timedRutas];
+    if (rows.length === 0) return;
+    hintPendingRef.current = false;
+    if (!swipeHint.consume()) return;
+    const live = rows.filter((r) => !r.deleted_at);
+    if (live.length === 0) return;
+    setPeekId((live.find((r) => canDelete(r)) || live[0]).id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rutas, loading, swipeHint.ready]);
+
   const openCreate = () => {
     if (createBlocked) {
       if (onCreateBlockedPress) onCreateBlockedPress();
-      else toastError(createBlockedMessage || 'No puedes crear rutas todavía');
+      else toastError(createBlockedMessage || t('planner.createBlocked'));
       return;
     }
     setEditingRuta(null);
@@ -252,15 +471,15 @@ export default function RutasPlanner({
     try {
       if (editingRuta) {
         await api.put(`/rutas/${editingRuta.id}`, payload);
-        toastSuccess('Ruta actualizada');
+        toastSuccess(t('planner.updated'));
       } else {
         await api.post('/rutas', { ...payload, ...createExtra });
-        toastSuccess('Ruta creada');
+        toastSuccess(t('planner.created'));
       }
       setFormVisible(false);
       load();
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo guardar la ruta'));
+      toastError(errorMessage(err, t('planner.saveError')));
     } finally {
       setSubmitting(false);
     }
@@ -273,26 +492,50 @@ export default function RutasPlanner({
       destructive: true,
       confirmLabel: t('common.delete'),
     });
-    if (!ok) return;
+    if (!ok) return false;
 
     try {
       await api.delete(`/rutas/${ruta.id}`);
-      toastSuccess('Ruta eliminada');
+      toastSuccess(t('planner.deleted'));
       load();
+      return true;
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo eliminar la ruta'));
+      toastError(errorMessage(err, t('planner.deleteError')));
+      return false;
     }
   };
 
   // Cambio rápido de estado/método de pago desde el propio listado, sin abrir
   // el detalle: son las dos acciones que se tocan a diario entre ruta y ruta.
+  const confirmRestore = async (ruta) => {
+    if (!canDelete(ruta)) {
+      toastInfo(t('planner.cannotRestore'));
+      return;
+    }
+    const ok = await confirm({
+      title: t('planner.restoreTitle'),
+      message: t('planner.restoreMessage', { name: ruta.client_name }),
+      confirmLabel: t('planner.restore'),
+    });
+    if (!ok) return;
+    try {
+      await api.post(`/rutas/${ruta.id}/restore`);
+      toastSuccess(t('planner.restored'));
+      load();
+    } catch (err) {
+      toastError(errorMessage(err, t('planner.restoreError')));
+    }
+  };
+
   const quickUpdate = async (ruta, patch) => {
     try {
       const resp = await api.put(`/rutas/${ruta.id}`, patch);
       const updated = { ...resp.data, trip_date: resp.data.trip_date?.slice(0, 10) ?? ruta.trip_date };
       setRutas((prev) => prev.map((r) => (r.id === ruta.id ? updated : r)));
+      // Tocar un viaje cerrado automáticamente cuenta como revisarlo.
+      if (ruta.needs_review) loadReview();
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo actualizar la ruta'));
+      toastError(errorMessage(err, t('planner.updateError')));
     }
   };
 
@@ -306,11 +549,15 @@ export default function RutasPlanner({
       themeColors={themeColors}
       vehicles={vehicles}
       user={user}
-      canEdit={canEdit(item)}
       canDelete={canDelete(item)}
       onEdit={openEdit}
       onDelete={confirmDelete}
       onQuickUpdate={quickUpdate}
+      onSwiped={swipeHint.markLearned}
+      peek={item.id === peekId}
+      onPeekDone={() => setPeekId(null)}
+      isWide={isWide}
+      onRestore={confirmRestore}
     />
   );
 
@@ -322,7 +569,7 @@ export default function RutasPlanner({
           className="m-3 mb-0 rounded-xl py-2.5 px-3 bg-tertiary/15 dark:bg-tertiary-dark/20"
         >
           <Text className="text-center text-tertiary dark:text-tertiary-dark">
-            {createBlockedMessage || 'Necesitas registrar un vehículo antes de crear rutas'}
+            {createBlockedMessage || t('planner.needVehicle')}
           </Text>
         </Pressable>
       )}
@@ -340,6 +587,18 @@ export default function RutasPlanner({
           </Text>
           <IconButton icon="chevron-right" onPress={() => setSelectedDate((d) => shiftDate(d, 1))} />
         </View>
+      )}
+
+      {reviewRutas.length > 0 && (
+        <Pressable
+          onPress={() => setReviewVisible(true)}
+          className="mx-3 mt-2 rounded-xl py-2 px-3 flex-row items-center justify-between bg-tertiary/15 dark:bg-tertiary-dark/20"
+        >
+          <Text className="flex-1 text-tertiary dark:text-tertiary-dark">
+            {t('planner.reviewBanner', { count: reviewRutas.length })}
+          </Text>
+          <Text className="font-bold text-tertiary dark:text-tertiary-dark">{t('planner.review')}</Text>
+        </Pressable>
       )}
 
       {loading ? (
@@ -360,14 +619,14 @@ export default function RutasPlanner({
                 {isWide && (
                   <View className="flex-row items-center px-1 pb-1.5 gap-3">
                     <Text className="w-9 text-xs opacity-60"> </Text>
-                    <Text className="flex-1 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Cliente / trayecto</Text>
-                    <Text className="w-[70px] text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Precio</Text>
-                    <Text className="w-[72px] text-xs opacity-60 text-right text-onSurface dark:text-onSurface-dark">Acciones</Text>
+                    <Text className="flex-1 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{t('planner.colClient')}</Text>
+                    <Text className="w-[70px] text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{t('planner.colPrice')}</Text>
+                    <Text className="w-[72px] text-xs opacity-60 text-right text-onSurface dark:text-onSurface-dark">{t('planner.colActions')}</Text>
                   </View>
                 )}
                 {noTimeRutas.length > 0 && (
                   <View className="mb-2">
-                    <Text className="mb-1.5 opacity-70 font-medium text-onSurface dark:text-onSurface-dark">Sin hora asignada</Text>
+                    <Text className="mb-1.5 opacity-70 font-medium text-onSurface dark:text-onSurface-dark">{t('planner.noTime')}</Text>
                     {noTimeRutas.map(renderRow)}
                   </View>
                 )}
@@ -377,7 +636,7 @@ export default function RutasPlanner({
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center py-12">
               <IconButton icon="calendar-blank-outline" size={40} disabled className="opacity-40" />
-              <Text className="text-center opacity-60 px-6 text-onSurface dark:text-onSurface-dark">{emptyMessage}</Text>
+              <Text className="text-center opacity-60 px-6 text-onSurface dark:text-onSurface-dark">{emptyMessage ?? t('planner.emptyDay')}</Text>
             </View>
           }
           renderItem={({ item }) => renderRow(item)}
@@ -386,7 +645,7 @@ export default function RutasPlanner({
 
       <FAB
         icon={createBlocked ? 'lock-outline' : 'plus'}
-        label={createBlocked ? undefined : 'Nueva ruta'}
+        label={createBlocked ? undefined : t('rutaForm.newTitle')}
         onPress={openCreate}
       />
 
@@ -408,6 +667,40 @@ export default function RutasPlanner({
         selectedDate={selectedDate}
         fetchParams={fetchParams}
       />
+
+      <AutoCompleteReviewModal
+        visible={reviewVisible}
+        rutas={reviewRutas}
+        user={user}
+        currency={currency}
+        busyId={reviewBusyId}
+        onDismiss={() => setReviewVisible(false)}
+        onConfirm={markReviewed}
+        onConfirmAll={markAllReviewed}
+        onEdit={editFromReview}
+        onUndo={undoAutoComplete}
+      />
+
+      <Dialog visible={introVisible} onDismiss={() => closeIntro()}>
+        <Dialog.Title>{t('planner.introTitle')}</Dialog.Title>
+        <Dialog.Content>
+          <Text className="mb-2 text-onSurface dark:text-onSurface-dark">
+            {t('planner.introP1')}
+          </Text>
+          <Text className="mb-2 text-onSurface dark:text-onSurface-dark">
+            {t('planner.introP2')}
+          </Text>
+          <Text className="text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+            {t('planner.introP3')}
+          </Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button mode="text" onPress={() => closeIntro(true)}>{t('nav.settings')}</Button>
+          <Button onPress={() => closeIntro()}>{t('common.gotIt')}</Button>
+        </Dialog.Actions>
+      </Dialog>
+
+      <AutoCompleteNotice message={notice} onHidden={hideNotice} />
     </View>
   );
 }

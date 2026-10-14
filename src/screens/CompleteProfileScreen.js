@@ -5,17 +5,19 @@ import { api, errorMessage } from '../utils/apiClient';
 import { isValidName } from '../utils/validators';
 import { useAuth } from '../context/AuthContext';
 import { toastError } from '../utils/toast';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 function validate({ firstName, lastName, secondLastName }) {
   const errors = {};
-  if (!firstName.trim()) errors.firstName = 'El nombre es obligatorio';
-  else if (!isValidName(firstName)) errors.firstName = 'Solo letras, entre 2 y 50 caracteres';
+  if (!firstName.trim()) errors.firstName = i18n.t('validation.firstNameRequired');
+  else if (!isValidName(firstName)) errors.firstName = i18n.t('validation.nameFormat');
 
-  if (!lastName.trim()) errors.lastName = 'El apellido es obligatorio';
-  else if (!isValidName(lastName)) errors.lastName = 'Solo letras, entre 2 y 50 caracteres';
+  if (!lastName.trim()) errors.lastName = i18n.t('validation.lastNameRequired');
+  else if (!isValidName(lastName)) errors.lastName = i18n.t('validation.nameFormat');
 
   if (secondLastName.trim() && !isValidName(secondLastName)) {
-    errors.secondLastName = 'Solo letras, entre 2 y 50 caracteres';
+    errors.secondLastName = i18n.t('validation.nameFormat');
   }
 
   return errors;
@@ -25,6 +27,7 @@ function validate({ firstName, lastName, secondLastName }) {
 // usuario entró con Google y Google no devolvió nombre/apellido. No tiene
 // menú ni forma de navegar a otro lado salvo guardar o cerrar sesión.
 export default function CompleteProfileScreen() {
+  const { t } = useTranslation();
   const { user, updateUser, logout } = useAuth();
 
   const [firstName, setFirstName] = useState(user.first_name || '');
@@ -41,7 +44,7 @@ export default function CompleteProfileScreen() {
   const save = async () => {
     setSubmitted(true);
     if (Object.keys(errors).length > 0) {
-      toastError('Revisa los datos marcados en rojo');
+      toastError(t('form.reviewRed'));
       return;
     }
     setLoading(true);
@@ -53,7 +56,7 @@ export default function CompleteProfileScreen() {
       });
       await updateUser(resp.data);
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo guardar tu perfil'));
+      toastError(errorMessage(err, t('completeProfile.saveError')));
     } finally {
       setLoading(false);
     }
@@ -69,16 +72,16 @@ export default function CompleteProfileScreen() {
         <Card className="w-full max-w-[440px]">
           <Card.Content className="py-6">
             <Text className="text-2xl font-bold text-center text-onSurface dark:text-onSurface-dark">
-              Completa tu perfil
+              {t('completeProfile.title')}
             </Text>
             <Text className="text-sm text-center mb-6 mt-1 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-              Nos faltan tu nombre y apellido para poder continuar
+              {t('completeProfile.subtitle')}
             </Text>
 
             <View className="flex-row gap-2.5">
               <View className="flex-1">
                 <Input
-                  label="Nombre"
+                  label={t('profile.firstName')}
                   value={firstName}
                   onChangeText={setFirstName}
                   error={submitted ? errors.firstName : undefined}
@@ -86,7 +89,7 @@ export default function CompleteProfileScreen() {
               </View>
               <View className="flex-1">
                 <Input
-                  label="Primer apellido"
+                  label={t('profile.lastName')}
                   value={lastName}
                   onChangeText={setLastName}
                   error={submitted ? errors.lastName : undefined}
@@ -95,17 +98,17 @@ export default function CompleteProfileScreen() {
             </View>
 
             <Input
-              label="Segundo apellido (opcional)"
+              label={t('profile.secondLastName')}
               value={secondLastName}
               onChangeText={setSecondLastName}
               error={submitted ? errors.secondLastName : undefined}
             />
 
             <Button mode="contained" onPress={save} loading={loading} disabled={loading} className="mt-2">
-              Guardar y continuar
+              {t('completeProfile.save')}
             </Button>
             <Button mode="text" onPress={logout} className="mt-1">
-              Cerrar sesión
+              {t('nav.logout')}
             </Button>
           </Card.Content>
         </Card>

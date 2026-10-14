@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { cn } from './cn';
+import { haptics } from '../../utils/haptics';
 
 function Card({ children, style, className, onPress }) {
   const Wrapper = onPress ? Pressable : View;
   return (
     <Wrapper
-      onPress={onPress}
+      onPress={onPress && ((e) => { haptics.light(); onPress(e); })}
       style={style}
-      className={cn('rounded-2xl bg-surface dark:bg-surface-dark shadow-sm overflow-hidden', className)}
+      className={cn('rounded-2xl bg-surface dark:bg-surface-dark shadow-sm dark:border dark:border-border-dark overflow-hidden', onPress && 'active:opacity-90', className)}
     >
       {children}
     </Wrapper>

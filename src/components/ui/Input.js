@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import Icon from './Icon';
+import FieldLabel from './FieldLabel';
 import { cn } from './cn';
 import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
 
 export default function Input({
   label,
+  required,
   left,
   right,
   onRightPress,
@@ -20,9 +22,7 @@ export default function Input({
   const placeholderColor = colors[resolvedScheme].onSurfaceVariant;
   return (
     <View style={style} className={cn('mb-1', className)}>
-      {!!label && (
-        <Text className="mb-1 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{label}</Text>
-      )}
+      <FieldLabel required={required}>{label}</FieldLabel>
       <View
         className={cn(
           'flex-row items-center border rounded-2xl px-3',

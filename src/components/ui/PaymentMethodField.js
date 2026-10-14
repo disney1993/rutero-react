@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { cn } from './cn';
+import i18n from '../../i18n';
 import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
 
@@ -9,12 +11,13 @@ import { colors } from '../../theme';
 // el método sin tener que leer la etiqueta completa cada vez.
 // Bizum no tiene color fijo aquí: usa el color de marca de la app (primary
 // del tema activo), resuelto en getPaymentMethodColor.
+// `label` es un getter traducido; `value` es lo que se guarda en la API.
 export const PAYMENT_METHODS = [
-  { value: 'bizum', label: 'Bizum', code: 'PB', color: null },
-  { value: 'tarjeta', label: 'Tarjeta', code: 'PT', color: '#2563EB' },
-  { value: 'efectivo', label: 'Efectivo', code: 'PE', color: '#16A34A' },
-  { value: 'no_pagado', label: 'No pagado', code: 'NP', color: '#D64545' },
-];
+  { value: 'bizum', code: 'PB', color: null },
+  { value: 'tarjeta', code: 'PT', color: '#2563EB' },
+  { value: 'efectivo', code: 'PE', color: '#16A34A' },
+  { value: 'no_pagado', code: 'NP', color: '#D64545' },
+].map((m) => Object.defineProperty(m, 'label', { get: () => i18n.t(`payment.${m.value}`), enumerable: true }));
 
 export function getPaymentMethod(value) {
   return PAYMENT_METHODS.find((m) => m.value === value) || null;
@@ -47,6 +50,7 @@ function Chip({ method, color, selected, onPress }) {
 }
 
 export default function PaymentMethodField({ label, value, onChange, className }) {
+  const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   const matched = getPaymentMethod(value);
@@ -61,7 +65,7 @@ export default function PaymentMethodField({ label, value, onChange, className }
           <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{label}</Text>
           {!!value && (
             <Pressable onPress={() => onChange('')}>
-              <Text className="text-xs text-primary dark:text-primary-dark">Quitar</Text>
+              <Text className="text-xs text-primary dark:text-primary-dark">{t('common.remove')}</Text>
             </Pressable>
           )}
         </View>

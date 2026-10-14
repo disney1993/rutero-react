@@ -28,11 +28,13 @@ export const colors = {
     secondary: '#00E5FF',
     tertiary: '#E9FF3D',
     background: '#0A0912',
-    surface: '#15132A',
+    // Tarjetas y modales claramente más claros que el fondo (y con borde, ver
+    // Card/Dialog): con el tono anterior apenas se distinguían en modo oscuro.
+    surface: '#211E3C',
     onSurface: '#F1EEFF',
     onSurfaceVariant: '#B6AFD6',
-    surfaceDisabled: '#2B2748',
-    border: '#3A3560',
+    surfaceDisabled: '#363159',
+    border: '#4A4480',
     error: '#FF3B6B',
   },
 };

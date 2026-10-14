@@ -2,10 +2,13 @@ export const CURRENT_YEAR = new Date().getFullYear();
 export const MIN_YEAR = CURRENT_YEAR;
 export const MAX_YEAR = CURRENT_YEAR + 10;
 
-export const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
+import { LocaleConfig } from 'react-native-calendars';
+
+// Nombres de los meses en el idioma activo (configurados en src/i18n).
+export function monthNames() {
+  const names = LocaleConfig.locales[LocaleConfig.defaultLocale]?.monthNames || LocaleConfig.locales.es.monthNames;
+  return names.map((n) => n.charAt(0).toUpperCase() + n.slice(1));
+}
 
 function pad(n) {
   return String(n).padStart(2, '0');

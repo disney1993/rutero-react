@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, ActivityIndicator } from 'react-native';
 import Icon from './Icon';
 import { cn } from './cn';
+import { haptics } from '../../utils/haptics';
 import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
 
@@ -35,11 +36,14 @@ export default function Button({
   const isDisabled = disabled || loading;
   return (
     <Pressable
-      onPress={onPress}
+      onPress={(e) => {
+        if (mode === 'contained') haptics.medium(); else haptics.light();
+        onPress?.(e);
+      }}
       disabled={isDisabled}
       style={style}
       className={cn(
-        'flex-row items-center justify-center rounded-full',
+        'flex-row items-center justify-center rounded-full active:opacity-80 active:scale-[0.97]',
         compact ? 'px-3 py-1.5' : 'px-6 py-2.5',
         MODE_CONTAINER[mode],
         isDisabled && 'opacity-50',

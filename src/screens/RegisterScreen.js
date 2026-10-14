@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Card, Button, Input, Avatar } from '../components/ui';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { api, errorMessage } from '../utils/apiClient';
 import { getInitials, getRandomAvatarColor } from '../utils/avatar';
 import { isValidName, isValidEmail, isValidPassword } from '../utils/validators';
@@ -10,22 +11,22 @@ import { toastError } from '../utils/toast';
 
 function validate({ firstName, lastName, secondLastName, email, password }) {
   const errors = {};
-  if (!firstName.trim()) errors.firstName = 'El nombre es obligatorio';
-  else if (!isValidName(firstName)) errors.firstName = 'Solo letras, entre 2 y 50 caracteres';
+  if (!firstName.trim()) errors.firstName = i18n.t('validation.firstNameRequired');
+  else if (!isValidName(firstName)) errors.firstName = i18n.t('validation.nameFormat');
 
-  if (!lastName.trim()) errors.lastName = 'El apellido es obligatorio';
-  else if (!isValidName(lastName)) errors.lastName = 'Solo letras, entre 2 y 50 caracteres';
+  if (!lastName.trim()) errors.lastName = i18n.t('validation.lastNameRequired');
+  else if (!isValidName(lastName)) errors.lastName = i18n.t('validation.nameFormat');
 
   if (secondLastName.trim() && !isValidName(secondLastName)) {
-    errors.secondLastName = 'Solo letras, entre 2 y 50 caracteres';
+    errors.secondLastName = i18n.t('validation.nameFormat');
   }
 
-  if (!email.trim()) errors.email = 'El email es obligatorio';
-  else if (!isValidEmail(email)) errors.email = 'Ingresa un email válido';
+  if (!email.trim()) errors.email = i18n.t('validation.emailRequired');
+  else if (!isValidEmail(email)) errors.email = i18n.t('validation.invalidEmail');
 
-  if (!password) errors.password = 'La contraseña es obligatoria';
-  else if (password.length > 72) errors.password = 'Debe tener como máximo 72 caracteres';
-  else if (!isValidPassword(password)) errors.password = 'Mínimo 6 caracteres, con una mayúscula, un número y un símbolo';
+  if (!password) errors.password = i18n.t('validation.passwordRequired');
+  else if (password.length > 72) errors.password = i18n.t('validation.passwordMaxLength');
+  else if (!isValidPassword(password)) errors.password = i18n.t('validation.passwordComplexity');
 
   return errors;
 }
@@ -62,7 +63,7 @@ export default function RegisterScreen({ navigation }) {
   const register = async () => {
     setSubmitted(true);
     if (Object.keys(errors).length > 0) {
-      toastError('Revisa los datos marcados en rojo');
+      toastError(t('form.reviewRed'));
       return;
     }
     setLoading(true);
@@ -104,7 +105,7 @@ export default function RegisterScreen({ navigation }) {
             <View className="items-center mb-5">
               <Avatar.Text size={72} label={initials} color={avatarColor} />
               <Text className="mt-2 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-                Así se verá tu avatar
+                {t('register.avatarPreview')}
               </Text>
             </View>
 
@@ -156,7 +157,7 @@ export default function RegisterScreen({ navigation }) {
             />
             {password.length > 0 && !showFieldError('password') && (
               <Text className="text-xs mb-2 -mt-0.5 text-secondary dark:text-secondary-dark">
-                Contraseña válida
+                {t('register.passwordValid')}
               </Text>
             )}
 

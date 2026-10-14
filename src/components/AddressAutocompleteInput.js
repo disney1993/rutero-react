@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Input, Card } from './ui';
 import { api } from '../utils/apiClient';
 
@@ -12,6 +13,7 @@ const MIN_CHARS = 3;
 // por lo que no se podrá calcular la distancia automáticamente para ese
 // tramo (se puede introducir el km a mano).
 export default function AddressAutocompleteInput({ label, value, onChangeText, onSelectPlace, error }) {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -73,7 +75,7 @@ export default function AddressAutocompleteInput({ label, value, onChangeText, o
         >
           {suggestions.length === 0 ? (
             <Text className="px-4 py-2.5 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-              {loading ? 'Buscando...' : 'Sin resultados. Puedes escribirla igual.'}
+              {loading ? t('address.searching') : t('address.noResults')}
             </Text>
           ) : (
             suggestions.map((place, idx) => (

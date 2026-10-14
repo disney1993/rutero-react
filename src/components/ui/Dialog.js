@@ -1,22 +1,41 @@
 import React from 'react';
-import { Modal, Pressable, View, Text } from 'react-native';
+import { Modal, Pressable, View, Text, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { cn } from './cn';
+import i18n from '../../i18n';
 
+// El fondo oscuro es una capa hermana DETRÁS del contenido (no su padre):
+// si el contenido estuviera dentro de un Pressable, este se quedaría con el
+// toque al empezar a arrastrar sobre una zona sin inputs y el ScrollView
+// interno nunca recibiría el gesto (solo se podía hacer scroll con la rueda
+// del ratón o empezando el arrastre sobre un input).
 function Dialog({ visible, onDismiss, children, dismissable = true, contentClassName, contentStyle }) {
   return (
-    <Modal visible={!!visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      <Pressable
-        className="flex-1 bg-black/50 items-center justify-center px-4"
-        onPress={dismissable ? onDismiss : undefined}
+    <Modal
+      visible={!!visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onDismiss}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 items-center justify-center px-4"
       >
         <Pressable
-          onPress={(e) => e.stopPropagation()}
+          style={StyleSheet.absoluteFill}
+          className="bg-black/50"
+          onPress={dismissable ? onDismiss : undefined}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('common.close')}
+        />
+        <View
           style={[{ maxWidth: 448 }, contentStyle]}
-          className={cn('w-full bg-surface dark:bg-surface-dark rounded-2xl p-4', contentClassName)}
+          className={cn('w-full bg-surface dark:bg-surface-dark dark:border dark:border-border-dark rounded-2xl p-4', contentClassName)}
         >
           {children}
-        </Pressable>
-      </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

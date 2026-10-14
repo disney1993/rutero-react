@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
-import { Card, IconButton, FAB, Chip, PageContainer } from '../components/ui';
+import { IconButton, FAB, PageContainer, Icon } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
@@ -9,8 +9,11 @@ import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useSelectedUser } from '../context/SelectedUserContext';
-import { toastSuccess, toastError } from '../utils/toast';
+import { toastSuccess, toastError, toastInfo } from '../utils/toast';
 import VehicleFormModal from '../components/VehicleFormModal';
+import VehicleListItem from '../components/VehicleListItem';
+import { sortVehiclesDefaultFirst, vehicleDeleteBlockReason } from '../utils/vehicles';
+import { useSwipeHint } from '../utils/swipeHint';
 import SelectedUserBanner from '../components/SelectedUserBanner';
 
 export default function MyVehiclesScreen() {
@@ -35,15 +38,30 @@ export default function MyVehiclesScreen() {
     try {
       const resp = await api.get('/vehicles', { params: isAdmin ? { owner_id: targetUser.id } : {} });
       setVehicles(resp.data);
+      return resp.data;
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudieron cargar los vehículos'));
+      toastError(errorMessage(err, t('vehicles.loadError')));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [isAdmin, targetUser?.id]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  // Pista del gesto de borrar: al entrar, la primera tarjeta que se puede
+  // eliminar se asoma sola hacia la izquierda (como mucho 3 veces, y nunca
+  // más una vez que el usuario ha deslizado alguna).
+  const swipeHint = useSwipeHint('rutero.vehicleSwipeHint.v2');
+  const [peekId, setPeekId] = useState(null);
+
+  useFocusEffect(useCallback(() => {
+    load().then((list) => {
+      if (!list?.length || !swipeHint.consume()) return;
+      const sorted = sortVehiclesDefaultFirst(list);
+      setPeekId((sorted.find((v) => !vehicleDeleteBlockReason(v)) || sorted[0]).id);
+    });
+    return () => setPeekId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, swipeHint.ready]));
 
   const onRefresh = () => { setRefreshing(true); load({ silent: true }); };
 
@@ -55,35 +73,39 @@ export default function MyVehiclesScreen() {
     try {
       if (editingVehicle) {
         await api.put(`/vehicles/${editingVehicle.id}`, payload);
-        toastSuccess('Vehículo actualizado');
+        toastSuccess(t('vehicles.updated'));
       } else {
         await api.post('/vehicles', isAdmin ? { ...payload, owner_id: targetUser.id } : payload);
-        toastSuccess('Vehículo añadido');
+        toastSuccess(t('vehicles.added'));
       }
       setFormVisible(false);
       load();
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo guardar el vehículo'));
+      toastError(errorMessage(err, t('vehicles.saveError')));
     } finally {
       setSubmitting(false);
     }
   };
 
   const confirmDelete = async (vehicle) => {
+    // Las reglas (predeterminado / con viajes) ya se comprueban en VehicleListItem.
+    // Devuelve true si se borró, para que la tarjeta no vuelva a su sitio.
     const ok = await confirm({
       title: t('alerts.confirmDeleteTitle'),
-      message: t('alerts.confirmDeleteVehicleMessage', { name: vehicle.plate || 'este vehículo' }),
+      message: t('alerts.confirmDeleteVehicleMessage', { name: vehicle.plate || t('vehicles.thisVehicle') }),
       destructive: true,
       confirmLabel: t('common.delete'),
     });
-    if (!ok) return;
+    if (!ok) return false;
 
     try {
       await api.delete(`/vehicles/${vehicle.id}`);
-      toastSuccess('Vehículo eliminado');
+      toastSuccess(t('vehicles.deleted'));
       load();
+      return true;
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo eliminar (revisa si tiene rutas asociadas)'));
+      toastError(errorMessage(err, t('vehicles.deleteError')));
+      return false;
     }
   };
 
@@ -103,7 +125,7 @@ export default function MyVehiclesScreen() {
       ) : (
         <PageContainer className="flex-1">
           <FlatList
-            data={vehicles}
+            data={sortVehiclesDefaultFirst(vehicles)}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={[{ padding: 12, paddingBottom: 96 }, vehicles.length === 0 && { flexGrow: 1 }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.primary} />}
@@ -111,50 +133,34 @@ export default function MyVehiclesScreen() {
               <View className="flex-1 items-center justify-center py-12">
                 <IconButton icon="car-outline" size={40} disabled className="opacity-40" />
                 <Text className="text-center opacity-60 px-6 text-onSurface dark:text-onSurface-dark">
-                  Aún no tienes vehículos.{'\n'}Añade uno para poder crear rutas.
+                  {t('vehicles.empty')}
                 </Text>
               </View>
             }
+            ListFooterComponent={vehicles.length > 0 ? (
+              <View className="flex-row items-center justify-center gap-1.5 mt-2 px-4">
+                <Icon name="gesture-swipe-left" size={18} color={themeColors.onSurfaceVariant} />
+                <Text className="text-center text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                  {t('vehicles.swipeHint')}
+                </Text>
+              </View>
+            ) : null}
             renderItem={({ item }) => (
-              <Card className="mb-2.5" onPress={() => openEdit(item)}>
-                <Card.Content>
-                  <View className="flex-row justify-between items-center gap-2">
-                    <Text
-                      numberOfLines={1}
-                      className="flex-1 text-base font-medium text-onSurface dark:text-onSurface-dark"
-                    >
-                      {item.plate || 'Sin matrícula'}
-                    </Text>
-                    <View className="flex-row gap-1.5">
-                      {item.is_default && (
-                        <Chip compact style={{ backgroundColor: themeColors.primary }} textClassName="text-white">
-                          Predeterminado
-                        </Chip>
-                      )}
-                      <Chip
-                        compact
-                        style={{ backgroundColor: item.active ? themeColors.secondary : themeColors.surfaceDisabled }}
-                        textClassName="text-white"
-                      >
-                        {item.active ? 'Activo' : 'Inactivo'}
-                      </Chip>
-                    </View>
-                  </View>
-                  <Text className="text-sm text-onSurface dark:text-onSurface-dark">
-                    {[item.make, item.model].filter(Boolean).join(' ') || 'Sin marca/modelo'}
-                  </Text>
-                </Card.Content>
-                <Card.Actions>
-                  <IconButton icon="pencil" onPress={() => openEdit(item)} />
-                  <IconButton icon="delete" onPress={() => confirmDelete(item)} />
-                </Card.Actions>
-              </Card>
+              <VehicleListItem
+                vehicle={item}
+                onEdit={openEdit}
+                onDelete={confirmDelete}
+                onBlocked={toastInfo}
+                onSwiped={swipeHint.markLearned}
+                peek={item.id === peekId}
+                onPeekDone={() => setPeekId(null)}
+              />
             )}
           />
         </PageContainer>
       )}
 
-      <FAB icon="plus" label="Nuevo vehículo" onPress={openCreate} />
+      <FAB icon="plus" label={t('vehicleForm.newTitle')} onPress={openCreate} />
 
       <VehicleFormModal
         visible={formVisible}

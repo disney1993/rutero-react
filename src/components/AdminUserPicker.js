@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Card, Input, Avatar, IconButton } from './ui';
 import { api, errorMessage } from '../utils/apiClient';
 import { getInitials } from '../utils/avatar';
@@ -13,6 +14,7 @@ import { useSelectedUser } from '../context/SelectedUserContext';
 // Dashboard Usuario, Rutas por día, Calendario y Vehículos compartan la
 // misma elección sin tener que volver a buscar en cada pantalla.
 export default function AdminUserPicker({ onRefresh }) {
+  const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   const { selectedUser, setSelectedUser } = useSelectedUser();
@@ -27,7 +29,7 @@ export default function AdminUserPicker({ onRefresh }) {
       const resp = await api.get('/admin/users', { params: { search: text } });
       setResults(resp.data);
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudieron cargar los usuarios'));
+      toastError(errorMessage(err, t('admin.usersLoadError')));
     }
   };
 
@@ -40,7 +42,7 @@ export default function AdminUserPicker({ onRefresh }) {
   return (
     <View className="mb-3">
       <Input
-        label="Buscar usuario (nombre o email)"
+        label={t('admin.searchUser')}
         value={search}
         onChangeText={onSearchChange}
         left="magnify"
@@ -84,7 +86,7 @@ export default function AdminUserPicker({ onRefresh }) {
               </Text>
               <Text className="text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{selectedUser.email}</Text>
             </View>
-            {onRefresh && <IconButton icon="refresh" onPress={onRefresh} accessibilityLabel="Refrescar" />}
+            {onRefresh && <IconButton icon="refresh" onPress={onRefresh} accessibilityLabel={t('common.refresh')} />}
           </Card.Content>
         </Card>
       )}

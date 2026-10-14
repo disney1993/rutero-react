@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { PageContainer, IconButton } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { useSelectedUser } from '../context/SelectedUserContext';
 import AdminUserPicker from '../components/AdminUserPicker';
 import UserStatsDashboard from '../components/UserStatsDashboard';
@@ -10,6 +11,7 @@ import UserStatsDashboard from '../components/UserStatsDashboard';
 // (UserStatsDashboard sin userId); el admin ve exactamente el mismo panel,
 // solo que antepone el buscador para elegir de quién.
 export default function UserDashboardScreen() {
+  const { t } = useTranslation();
   const { isAdmin } = useAuth();
   const { selectedUser } = useSelectedUser();
   const [reloadKey, setReloadKey] = useState(0);
@@ -23,7 +25,7 @@ export default function UserDashboardScreen() {
           <View className="items-center justify-center py-12">
             <IconButton icon="account-search-outline" size={40} disabled className="opacity-40" />
             <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">
-              Busca un usuario para ver su actividad
+              {t('admin.searchUserActivity')}
             </Text>
           </View>
         ) : (

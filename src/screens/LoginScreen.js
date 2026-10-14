@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Card, Button, Input, Divider } from '../components/ui';
 import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
@@ -52,11 +53,11 @@ export default function LoginScreen({ navigation }) {
   const loginWithGoogle = async () => {
     const clientId = GOOGLE_WEB_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID || GOOGLE_IOS_CLIENT_ID;
     if (!clientId) {
-      toastError('No hay client ID de Google configurado. Añade los client IDs en app.json (expo.extra).');
+      toastError(t('auth.googleNotConfigured'));
       return;
     }
 
-    const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+    const redirectUri = AuthSession.makeRedirectUri();
     const nonce = Math.random().toString(36).slice(2);
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
       redirectUri
@@ -64,16 +65,19 @@ export default function LoginScreen({ navigation }) {
 
     setGoogleLoading(true);
     try {
-      const result = await AuthSession.startAsync({ authUrl });
-      if (result.type === 'success' && result.params?.id_token) {
-        const idToken = result.params.id_token;
+      // AuthSession.startAsync desapareció en SDK 49+: abrimos la sesión del
+      // navegador directamente y leemos el id_token del fragmento (#) de vuelta.
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      const fragment = result.type === 'success' ? (result.url.split('#')[1] || '') : '';
+      const idToken = new URLSearchParams(fragment).get('id_token');
+      if (idToken) {
         const resp = await api.post('/auth/google/mobile', { id_token: idToken });
         await setSession(resp.data.user, resp.data.access_token);
       } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
-        toastError('No se pudo completar el inicio con Google');
+        toastError(t('auth.googleFailed'));
       }
     } catch (err) {
-      toastError('Error en Google Sign-In');
+      toastError(t('auth.googleError'));
     } finally {
       setGoogleLoading(false);
     }

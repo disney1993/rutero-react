@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { Dialog, Input, Button, SegmentedButtons, PaymentMethodField, CAR_COLOR_PALETTE } from './ui';
+import { Dialog, Input, Button, SegmentedButtons, PaymentMethodField, KNOWN_CAR_COLORS } from './ui';
 import { STATUS_OPTIONS, STATUS_COLORS, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
 import { PHONE_REGEX } from '../utils/validators';
 import { getVehicleSwatchColor } from '../utils/avatar';
-import { roundToNearest5, formatCurrency } from '../utils/currency';
+import { roundToNearest5, formatCurrency, DEFAULT_PRICE_PER_KM } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/apiClient';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
+import { autoCompleteEnabled, estimateDurationMin, formatDuration, previewAutoCompleteTime } from '../utils/autoComplete';
 import DatePickerField from './DatePickerField';
 import TimePickerField from './TimePickerField';
 import AddressAutocompleteInput from './AddressAutocompleteInput';
@@ -24,6 +27,9 @@ const emptyForm = {
   trip_time: '',
   passenger_count: '',
   estimated_distance_km: '',
+  // Duración por carretera que devuelve OSRM junto con la distancia; la usa
+  // el cierre automático para estimar cuándo termina el viaje.
+  estimated_duration_min: null,
   price_per_km: '',
   final_price: '',
   payment_method: '',
@@ -35,27 +41,27 @@ const emptyForm = {
 function validate(form, fieldSet, vehicles) {
   const e = {};
   if (fieldSet === 'full') {
-    if (!form.client_name.trim() || form.client_name.trim().length < 2) e.client_name = 'Obligatorio, mínimo 2 caracteres';
-    if (form.client_phone && !PHONE_REGEX.test(form.client_phone.trim())) e.client_phone = 'Teléfono inválido';
-    if (!form.origin.trim() || form.origin.trim().length < 2) e.origin = 'Obligatorio, mínimo 2 caracteres';
-    if (!form.destination.trim() || form.destination.trim().length < 2) e.destination = 'Obligatorio, mínimo 2 caracteres';
-    if (!form.trip_date) e.trip_date = 'Elige una fecha';
-    if (form.trip_time && !TIME_REGEX.test(form.trip_time.trim())) e.trip_time = 'Formato HH:MM (24h)';
+    if (!form.client_name.trim() || form.client_name.trim().length < 2) e.client_name = i18n.t('rutaForm.errors.min2');
+    if (form.client_phone && !PHONE_REGEX.test(form.client_phone.trim())) e.client_phone = i18n.t('rutaForm.errors.phone');
+    if (!form.origin.trim() || form.origin.trim().length < 2) e.origin = i18n.t('rutaForm.errors.min2');
+    if (!form.destination.trim() || form.destination.trim().length < 2) e.destination = i18n.t('rutaForm.errors.min2');
+    if (!form.trip_date) e.trip_date = i18n.t('rutaForm.errors.date');
+    if (form.trip_time && !TIME_REGEX.test(form.trip_time.trim())) e.trip_time = i18n.t('rutaForm.errors.time');
     if (form.passenger_count && (!/^\d+$/.test(form.passenger_count) || Number(form.passenger_count) < 1)) {
-      e.passenger_count = 'Debe ser un número mayor a 0';
+      e.passenger_count = i18n.t('rutaForm.errors.greaterThanZero');
     }
     if (form.estimated_distance_km && (isNaN(Number(form.estimated_distance_km)) || Number(form.estimated_distance_km) < 0)) {
-      e.estimated_distance_km = 'Debe ser un número positivo';
+      e.estimated_distance_km = i18n.t('validation.positiveNumber');
     }
     if (form.price_per_km && (isNaN(Number(form.price_per_km)) || Number(form.price_per_km) < 0)) {
-      e.price_per_km = 'Debe ser un número positivo';
+      e.price_per_km = i18n.t('validation.positiveNumber');
     }
     // Sin vehículos no se puede exigir elegir uno (p. ej. conduciendo para un
     // propietario ajeno, donde ni siquiera se muestra el selector).
-    if (vehicles.length > 0 && !form.vehicle_id) e.vehicle_id = 'Elige un vehículo';
+    if (vehicles.length > 0 && !form.vehicle_id) e.vehicle_id = i18n.t('rutaForm.errors.vehicle');
   }
   if (form.final_price && (isNaN(Number(form.final_price)) || Number(form.final_price) < 0)) {
-    e.final_price = 'Debe ser un número positivo';
+    e.final_price = i18n.t('validation.positiveNumber');
   }
   return e;
 }
@@ -63,7 +69,8 @@ function validate(form, fieldSet, vehicles) {
 // fieldSet 'full': creación u owner/admin editando. 'driverUpdate': el
 // conductor editando una ruta que no creó él mismo (backend solo acepta
 // final_price, payment_method, status, notes de todas formas).
-export default function RutaFormModal({ visible, onDismiss, onSubmit, initialValues, defaultDate, fieldSet = 'full', vehicles = [], submitting }) {
+export default function RutaFormModal({ visible, onDismiss, onSubmit, initialValues, defaultDate, defaultTime, fieldSet = 'full', vehicles = [], submitting }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
@@ -96,24 +103,30 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
         setForm({
           ...emptyForm,
           trip_date: defaultDate || todayISO(),
-          trip_time: roundUpToNext15Minutes(),
+          trip_time: defaultTime || roundUpToNext15Minutes(),
           status: 'pending',
-          price_per_km: user?.price_per_km ? String(user.price_per_km) : '',
+          // Sin precio propio se propone la referencia de taxi (solo en euros).
+          price_per_km: user?.price_per_km
+            ? String(user.price_per_km)
+            : (user?.currency || 'EUR') === 'EUR' ? String(DEFAULT_PRICE_PER_KM) : '',
           vehicle_id: defaultVehicle ? defaultVehicle.id : null,
         });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, initialValues, defaultDate]);
+  }, [visible, initialValues, defaultDate, defaultTime]);
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
   const selectOrigin = (place) => setForm((f) => ({ ...f, origin: place.display_name, origin_lat: place.lat, origin_lng: place.lon }));
   const selectDestination = (place) => setForm((f) => ({ ...f, destination: place.display_name, destination_lat: place.lat, destination_lng: place.lon }));
   // Si el usuario reescribe la dirección a mano, las coordenadas ya elegidas
-  // dejan de ser válidas para ese texto.
-  const changeOrigin = (text) => setForm((f) => ({ ...f, origin: text, origin_lat: null, origin_lng: null }));
-  const changeDestination = (text) => setForm((f) => ({ ...f, destination: text, destination_lat: null, destination_lng: null }));
+  // dejan de ser válidas para ese texto (y con ellas la duración calculada).
+  const changeOrigin = (text) => setForm((f) => ({ ...f, origin: text, origin_lat: null, origin_lng: null, estimated_duration_min: null }));
+  const changeDestination = (text) => setForm((f) => ({ ...f, destination: text, destination_lat: null, destination_lng: null, estimated_duration_min: null }));
+  // Un km escrito a mano ya no corresponde a la duración de OSRM: el servidor
+  // la estimará a partir de los km.
+  const changeDistance = (text) => setForm((f) => ({ ...f, estimated_distance_km: text, estimated_duration_min: null }));
 
   useEffect(() => {
     const { origin_lat, origin_lng, destination_lat, destination_lng, estimated_distance_km } = form;
@@ -132,10 +145,10 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
       if (cancelled) return;
       const km = String(resp.data.distance_km);
       lastAutoDistanceRef.current = km;
-      setForm((f) => ({ ...f, estimated_distance_km: km }));
+      setForm((f) => ({ ...f, estimated_distance_km: km, estimated_duration_min: resp.data.duration_min ?? null }));
     }).catch((err) => {
       if (cancelled) return;
-      setDistanceError(err.response?.data?.message || 'No se pudo calcular la distancia automáticamente. Introdúcela a mano.');
+      setDistanceError(err.response?.data?.message || i18n.t('rutaForm.distanceError'));
     }).finally(() => {
       if (!cancelled) setCalculatingDistance(false);
     });
@@ -176,6 +189,7 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
         trip_time: form.trip_time || null,
         passenger_count: form.passenger_count ? Number(form.passenger_count) : null,
         estimated_distance_km: form.estimated_distance_km ? Number(form.estimated_distance_km) : null,
+        estimated_duration_min: form.estimated_duration_min ? Number(form.estimated_duration_min) : null,
         price_per_km: form.price_per_km ? Number(form.price_per_km) : null,
         vehicle_id: form.vehicle_id,
       });
@@ -188,32 +202,32 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
     <Dialog visible={visible} onDismiss={onDismiss} contentStyle={{ maxWidth: 480, maxHeight: '90%' }} contentClassName="p-0">
       <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text className="font-bold text-lg mb-4 text-onSurface dark:text-onSurface-dark">
-          {initialValues ? 'Editar ruta' : 'Nueva ruta'}
+          {initialValues ? t('rutaForm.editTitle') : t('rutaForm.newTitle')}
         </Text>
 
         {fieldSet === 'full' && (
           <>
-            <Input label="Cliente" value={form.client_name} onChangeText={set('client_name')} error={submitted ? errors.client_name : undefined} />
-            <Input label="Teléfono (opcional)" value={form.client_phone} onChangeText={set('client_phone')} keyboardType="phone-pad" error={submitted ? errors.client_phone : undefined} />
+            <Input label={t('rutaForm.client')} value={form.client_name} onChangeText={set('client_name')} error={submitted ? errors.client_name : undefined} />
+            <Input label={t('rutaForm.phone')} value={form.client_phone} onChangeText={set('client_phone')} keyboardType="phone-pad" error={submitted ? errors.client_phone : undefined} />
 
-            <AddressAutocompleteInput label="Origen" value={form.origin} onChangeText={changeOrigin} onSelectPlace={selectOrigin} error={submitted ? errors.origin : undefined} />
-            <AddressAutocompleteInput label="Destino" value={form.destination} onChangeText={changeDestination} onSelectPlace={selectDestination} error={submitted ? errors.destination : undefined} />
+            <AddressAutocompleteInput label={t('rutaForm.origin')} value={form.origin} onChangeText={changeOrigin} onSelectPlace={selectOrigin} error={submitted ? errors.origin : undefined} />
+            <AddressAutocompleteInput label={t('rutaForm.destination')} value={form.destination} onChangeText={changeDestination} onSelectPlace={selectDestination} error={submitted ? errors.destination : undefined} />
 
             <Text className="opacity-60 text-xs mb-3 text-onSurface dark:text-onSurface-dark">
-              Elige una dirección de la lista para calcular el km automáticamente, o escríbela libremente e introduce el km a mano.
+              {t('rutaForm.addressHint')}
             </Text>
 
             <View className="flex-row gap-2.5">
               <View className="flex-1">
-                <DatePickerField label="Fecha" value={form.trip_date} onChange={set('trip_date')} error={submitted ? errors.trip_date : undefined} />
+                <DatePickerField label={t('rutaForm.date')} value={form.trip_date} onChange={set('trip_date')} error={submitted ? errors.trip_date : undefined} />
               </View>
               <View className="flex-1">
-                <TimePickerField label="Hora (opcional)" value={form.trip_time} onChange={set('trip_time')} error={submitted ? errors.trip_time : undefined} />
+                <TimePickerField label={t('rutaForm.time')} value={form.trip_time} onChange={set('trip_time')} error={submitted ? errors.trip_time : undefined} />
               </View>
             </View>
 
             <Input
-              label="Nº pasajeros (opcional)"
+              label={t('rutaForm.passengers')}
               value={form.passenger_count}
               onChangeText={set('passenger_count')}
               keyboardType="numeric"
@@ -223,45 +237,45 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
             <View className="flex-row gap-2.5">
               <View className="flex-1">
                 <Input
-                  label={calculatingDistance ? 'Calculando distancia...' : 'Distancia km (opcional)'}
+                  label={calculatingDistance ? t('rutaForm.calculatingDistance') : t('rutaForm.distance')}
                   value={form.estimated_distance_km}
-                  onChangeText={set('estimated_distance_km')}
+                  onChangeText={changeDistance}
                   keyboardType="numeric"
                   editable={!calculatingDistance}
                   error={submitted ? errors.estimated_distance_km : undefined}
                 />
               </View>
               <View className="flex-1">
-                <Input label="Precio/km (opcional)" value={form.price_per_km} onChangeText={set('price_per_km')} keyboardType="numeric" error={submitted ? errors.price_per_km : undefined} />
+                <Input label={t('rutaForm.pricePerKm')} value={form.price_per_km} onChangeText={set('price_per_km')} keyboardType="numeric" error={submitted ? errors.price_per_km : undefined} />
               </View>
             </View>
             {(!!distanceError || (form.origin_lat != null && form.destination_lat != null && !calculatingDistance)) && (
               <Text className={distanceError ? 'text-error dark:text-error-dark text-xs mb-3' : 'opacity-70 text-xs mb-3 text-onSurface dark:text-onSurface-dark'}>
-                {distanceError || 'Distancia calculada automáticamente por carretera. Puedes ajustarla si lo necesitas.'}
+                {distanceError || t('rutaForm.distanceAuto')}
               </Text>
             )}
 
             {suggestedPrice !== null && (
               <View className="flex-row items-center justify-between rounded-xl px-3 py-1.5 mb-3 bg-primary/10 dark:bg-primary-dark/20">
                 <Text className="text-primary dark:text-primary-dark">
-                  Precio sugerido: <Text className="font-bold">{formatCurrency(suggestedPrice, currency)}</Text>
+                  {t('rutaForm.suggestedPrice')} <Text className="font-bold">{formatCurrency(suggestedPrice, currency)}</Text>
                 </Text>
                 <Button compact mode="text" onPress={() => set('final_price')(String(suggestedPrice))}>
-                  Usar este precio
+                  {t('rutaForm.useThisPrice')}
                 </Button>
               </View>
             )}
 
             {vehicles.length > 0 && (
               <>
-                <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">Vehículo</Text>
+                <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('rutaForm.vehicle')}</Text>
                 <SegmentedButtons
                   value={form.vehicle_id ? String(form.vehicle_id) : ''}
                   onValueChange={(v) => set('vehicle_id')(v ? Number(v) : null)}
                   buttons={vehicles.map((v) => ({
                     value: String(v.id),
                     label: v.plate || `#${v.id}`,
-                    dotColor: getVehicleSwatchColor(v, CAR_COLOR_PALETTE),
+                    dotColor: getVehicleSwatchColor(v, KNOWN_CAR_COLORS),
                   }))}
                   className="mb-1"
                 />
@@ -273,7 +287,7 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
           </>
         )}
 
-        <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">Estado</Text>
+        <Text className="mb-2 mt-1 font-medium text-onSurface dark:text-onSurface-dark">{t('rutaForm.status')}</Text>
         <SegmentedButtons
           value={form.status}
           onValueChange={set('status')}
@@ -281,17 +295,28 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
           className="mb-1"
         />
 
+        {form.status === 'pending' && autoCompleteEnabled(user) && (
+          <View className="rounded-xl px-3 py-2 mb-2 bg-primary/10 dark:bg-primary-dark/20">
+            <Text className="text-xs text-onSurface dark:text-onSurface-dark">
+              {form.trip_time
+                ? t('rutaForm.autoCompleteAt', { time: previewAutoCompleteTime(form, user), duration: formatDuration(estimateDurationMin(form, user)) })
+                : t('rutaForm.autoCompleteEndOfDay')}
+              {' '}{t('rutaForm.autoCompleteFixLater')}
+            </Text>
+          </View>
+        )}
+
         <Input
-          label={`Precio final (opcional, en ${currency})`}
+          label={t('rutaForm.finalPrice', { currency })}
           value={form.final_price}
           onChangeText={set('final_price')}
           keyboardType="numeric"
           error={submitted ? errors.final_price : undefined}
         />
 
-        <PaymentMethodField label="Método de pago (opcional)" value={form.payment_method} onChange={set('payment_method')} className="mb-1" />
+        <PaymentMethodField label={t('rutaForm.paymentMethod')} value={form.payment_method} onChange={set('payment_method')} className="mb-1" />
 
-        <Input label="Notas (opcional)" value={form.notes} onChangeText={set('notes')} multiline numberOfLines={3} />
+        <Input label={t('form.notesOptional')} value={form.notes} onChangeText={set('notes')} multiline numberOfLines={3} />
 
         <Button
           mode="contained"
@@ -300,9 +325,9 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
           disabled={submitting || (submitted && !isValid)}
           className="mt-4"
         >
-          {initialValues ? 'Guardar cambios' : 'Crear ruta'}
+          {initialValues ? t('form.saveChanges') : t('rutaForm.create')}
         </Button>
-        <Button mode="text" onPress={onDismiss} className="mt-1">Cancelar</Button>
+        <Button mode="text" onPress={onDismiss} className="mt-1">{t('common.cancel')}</Button>
       </ScrollView>
     </Dialog>
   );

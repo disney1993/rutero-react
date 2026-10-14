@@ -9,7 +9,19 @@
     "loading": "Loading...",
     "error": "Something went wrong",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "unexpectedError": "An unexpected error occurred",
+    "remove": "Remove",
+    "selectPlaceholder": "Select…",
+    "done": "Done",
+    "refresh": "Refresh",
+    "today": "Today",
+    "accept": "OK",
+    "copy": "Copy",
+    "hide": "Hide",
+    "show": "Show",
+    "use": "Use",
+    "gotIt": "Got it"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -21,7 +33,8 @@
     "driverMode": "Workday",
     "profile": "My Profile",
     "settings": "Settings",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "user": "User"
   },
   "auth": {
     "appName": "Rutero",
@@ -39,7 +52,10 @@
     "fillEmailPassword": "Enter your email and password",
     "invalidEmail": "Enter a valid email",
     "loginFailed": "Could not sign in",
-    "registerFailed": "Could not complete registration"
+    "registerFailed": "Could not complete registration",
+    "googleNotConfigured": "No Google client ID configured. Add the client IDs in app.json (expo.extra).",
+    "googleFailed": "Could not complete Google sign-in",
+    "googleError": "Google Sign-In error"
   },
   "profile": {
     "title": "Profile settings",
@@ -71,7 +87,10 @@
     "themeDark": "Dark",
     "languageSection": "Language",
     "language": "App language",
-    "noChanges": "No changes to save"
+    "noChanges": "No changes to save",
+    "currencyEur": "Euro (€)",
+    "currencyUsd": "Dollar ($)",
+    "defaultPriceHint": "If you leave it empty, {{price}} €/km will be suggested when creating routes, a bit above the average intercity taxi fare in Spain because the suggested price doesn't add the flag fall, waiting time or surcharges."
   },
   "validation": {
     "required": "Required",
@@ -83,13 +102,384 @@
     "passwordComplexity": "At least 6 characters, with one uppercase letter, one number and one symbol",
     "passwordMismatch": "Passwords don't match",
     "wrongCurrentPassword": "Current password is incorrect",
-    "positiveNumber": "Must be a positive number"
+    "positiveNumber": "Must be a positive number",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "emailRequired": "Email is required",
+    "passwordRequired": "Password is required"
   },
   "alerts": {
     "confirmDeleteTitle": "Confirm deletion",
-    "confirmDeleteRutaMessage": "Delete the route for {{name}}?",
+    "confirmDeleteRutaMessage": "Delete the trip for {{name}}? It will stay in the list struck through and you can restore it by tapping it.",
     "confirmDeleteVehicleMessage": "Delete {{name}}?",
     "confirmDeleteUserMessage": "Delete {{name}}'s account? Their routes and vehicles will be deleted too.",
     "genericError": "Couldn't complete the action"
+  },
+  "autoComplete": {
+    "title": "Automatic trip completion",
+    "enabled": "Complete trips automatically",
+    "explanation": "So you never have to touch your phone while driving, each pending trip is marked as completed and paid in cash when the next trip of the same driver or vehicle starts or, at the latest, once its estimated road duration plus a margin has passed. The app only shows an informative notice; corrections are made in \"To review\", with the vehicle stopped.",
+    "startDelay": "Wait until the trip starts (minutes, usually 5-10)",
+    "marginMin": "Final margin: drop-off and payment (minutes)",
+    "marginPct": "Traffic margin (% of duration)",
+    "defaultDuration": "Duration when there is no distance (minutes)",
+    "example": "Example: a {{duration}} min road trip scheduled at 10:00 would be completed at {{time}}.",
+    "save": "Save automatic completion",
+    "saved": "Automatic completion updated",
+    "invalid": "Check the values: wait 0-120 min, final margin 0-240 min, margin 0-100 % and duration 5-1440 min",
+    "disabledHint": "Disabled: you will have to mark every trip by hand.",
+    "nextDay": "{{time}} the next day"
+  },
+  "account": {
+    "editProfile": "Edit profile",
+    "logoutConfirm": "Are you sure you want to log out?",
+    "driverModeHint": "Manage an owner’s routes with their code",
+    "settingsHint": "Theme, language, haptics and auto-complete"
+  },
+  "settings": {
+    "haptics": "Haptic feedback",
+    "hapticsHint": "Subtle vibration when tapping buttons, switching tabs or confirming actions."
+  },
+  "status": {
+    "pending": "Pending",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "duration": {
+    "min": "{{min}} min",
+    "h": "{{h}} h",
+    "hMin": "{{h}} h {{m}} min"
+  },
+  "vehicles": {
+    "deleteBlockedDefault": "This is the default vehicle. Mark another one as default before deleting it.",
+    "deleteBlockedRutas_one": "It has 1 trip linked to it, so it cannot be deleted.",
+    "deleteBlockedRutas_other": "It has {{count}} trips linked to it, so it cannot be deleted.",
+    "loadError": "Could not load vehicles",
+    "updated": "Vehicle updated",
+    "added": "Vehicle added",
+    "saveError": "Could not save the vehicle",
+    "thisVehicle": "this vehicle",
+    "deleted": "Vehicle deleted",
+    "deleteError": "Could not delete it (check whether it has linked routes)",
+    "empty": "You don't have any vehicles yet.\nAdd one to be able to create routes.",
+    "noPlate": "No plate",
+    "default": "Default",
+    "noMakeModel": "No make/model",
+    "swipeHint": "Tap a vehicle to edit it · swipe it left to delete it",
+    "locked": "Locked"
+  },
+  "payment": {
+    "bizum": "Bizum",
+    "tarjeta": "Card",
+    "efectivo": "Cash",
+    "no_pagado": "Unpaid",
+    "none": "No payment method"
+  },
+  "vehicleTypes": {
+    "compacto": {
+      "label": "Hatchback",
+      "hint": "AB · Compact or city car"
+    },
+    "sedan": {
+      "label": "Saloon",
+      "hint": "AA · Three-box sedan"
+    },
+    "monovolumen": {
+      "label": "Multi-purpose vehicle",
+      "hint": "AF · MPV, estate or passenger van"
+    },
+    "suv": {
+      "label": "Off-road",
+      "hint": "SUV or 4x4"
+    },
+    "motocicleta": {
+      "label": "Motorcycle",
+      "hint": "L · Motorbike, moped or scooter"
+    },
+    "camion": {
+      "label": "Truck",
+      "hint": "N · Truck or cargo van"
+    },
+    "groups": {
+      "M1": "Passenger cars · M1",
+      "L": "Motorcycles · L",
+      "N": "Trucks · N"
+    },
+    "unknown": "Not specified («{{value}}»)",
+    "unspecified": "Not specified",
+    "placeholder": "Select a type",
+    "sheetTitle": "Body type"
+  },
+  "carColors": {
+    "blanco": "White",
+    "negro": "Black",
+    "gris": "Grey",
+    "plata": "Silver",
+    "azul": "Blue",
+    "rojo": "Red",
+    "verde": "Green",
+    "amarillo": "Yellow",
+    "naranja": "Orange",
+    "marron": "Brown",
+    "beige": "Beige"
+  },
+  "colorPicker": {
+    "title": "Choose the vehicle colour",
+    "moreColors": "Other common colours",
+    "use": "Use this colour",
+    "other": "Other",
+    "otherA11y": "Other colour"
+  },
+  "address": {
+    "searching": "Searching...",
+    "noResults": "No results. You can type it anyway."
+  },
+  "admin": {
+    "usersLoadError": "Could not load users",
+    "searchUser": "Search user (name or email)",
+    "selectUserHint": "Select a user in User Dashboard to see their information here",
+    "viewing": "Viewing:",
+    "tapToChange": "tap to change",
+    "filters": {
+      "all": "All",
+      "owners": "Owners",
+      "drivers": "Drivers",
+      "incomplete": "Incomplete profile"
+    },
+    "users": "Users",
+    "topOwners": "Top owners (routes)",
+    "colName": "Name",
+    "noResults": "No results",
+    "tabs": {
+      "profile": "Profile"
+    },
+    "userUpdated": "User updated",
+    "userUpdateError": "Could not update the user",
+    "userDeleteError": "Could not delete the user",
+    "incompleteProfileHint": "This user hasn't completed their profile (missing first or last name). They'll be asked to when they log in.",
+    "userType": "User type (based on activity)",
+    "noActivityYet": "No activity yet (no vehicles or codes)",
+    "secondLastName": "Second surname",
+    "role": "Role",
+    "plan": "Plan",
+    "planFree": "Free",
+    "planPremium": "Premium",
+    "deleteUser": "Delete user",
+    "noVehicles": "No vehicles",
+    "noRutasDay": "This user has no routes on this day.",
+    "searchUserActivity": "Search a user to see their activity"
+  },
+  "timePicker": {
+    "title": "Choose time",
+    "now": "Now"
+  },
+  "stats": {
+    "loadError": "Could not load the summary",
+    "rutas": "Routes",
+    "vehicles": "Vehicles",
+    "revenue": "Revenue (completed)",
+    "noActivity": "No activity",
+    "rutasByStatus": "Routes by status"
+  },
+  "roles": {
+    "owner": "Owner",
+    "driver": "Driver",
+    "admin": "Admin"
+  },
+  "ownerCode": {
+    "needVehicle": "You need at least one vehicle to generate a code",
+    "copied": "Code copied to clipboard",
+    "title": "Driver code",
+    "explanation": "Share this code with whoever will drive for you this month. It is only valid during the current month.",
+    "none": "You haven't generated a code this month yet.",
+    "generate": "Generate"
+  },
+  "review": {
+    "title": "To review",
+    "explanation": "These trips were automatically marked as completed and paid in cash. If something is wrong, fix it here. Always do it with the vehicle stopped.",
+    "empty": "No trips to review",
+    "autoCompleted": "Completed automatically",
+    "correct": "Correct",
+    "fix": "Fix",
+    "undo": "Undo",
+    "allCorrect": "All correct"
+  },
+  "tariffs": {
+    "title": "Reference taxi fares by region",
+    "explanation": "Maximum intercity fares on weekday daytime, published by each Spanish region. The price shown is per km travelled: where both the outbound and return legs are charged (closed circuit) it is double the official fare. It is only a guide: if you work as a private hire driver your prices are free and everyone sets their own.",
+    "loadError": "Could not load the reference fares.",
+    "defaultPrice": "Rutero default price:",
+    "medianExplanation": "The median across regions is {{median}}/km. Rutero suggests a bit more because the suggested price is just distance × price/km: it does not add the flag fall, minimum fare, waiting time or night/holiday surcharges.",
+    "official": "Official fare {{price}}/km",
+    "roundTrip": "(round trip)",
+    "oneWay": "(one way)",
+    "nightHolidays": "night/holidays {{price}}/km",
+    "returnUnknown": "The regulation does not say whether the return is charged",
+    "source": "Source: {{source}}",
+    "unverified": "No verified data ({{list}}): check your region’s official gazette.",
+    "reviewed": "Reviewed on {{date}}."
+  },
+  "vehicleForm": {
+    "errors": {
+      "plateRequired": "The plate is required",
+      "plateFormat": "Letters and numbers only (max. {{max}})",
+      "makeRequired": "The make is required",
+      "typeRequired": "Choose the vehicle type",
+      "modelRequired": "The model is required",
+      "colorRequired": "Choose the colour",
+      "colorInvalid": "Choose a valid colour",
+      "yearRequired": "Choose the year",
+      "seatsRequired": "Choose the seats"
+    },
+    "editTitle": "Edit vehicle",
+    "newTitle": "New vehicle",
+    "plate": "Number plate",
+    "platePlaceholder": "E.g. AB12CDE",
+    "make": "Make",
+    "makePlaceholder": "Choose make",
+    "otherMake": "Other make…",
+    "typeMake": "Type the make",
+    "model": "Model",
+    "modelPlaceholder": "Choose model",
+    "otherModel": "Other model…",
+    "typeModel": "Type the model",
+    "color": "Colour",
+    "type": "Type",
+    "year": "Year",
+    "yearPlaceholder": "Choose year",
+    "seats": "Seats",
+    "seatsPlaceholder": "Seats",
+    "firstDefault": "It will automatically be set as your default vehicle.",
+    "isDefault": "This is your default vehicle. To change it, set another vehicle as default.",
+    "defaultSwitch": "Default vehicle",
+    "add": "Add vehicle"
+  },
+  "form": {
+    "reviewRed": "Check the fields marked in red",
+    "completeRequired": "Fill in the required fields to continue",
+    "requiredLegend": "Required field",
+    "notesOptional": "Notes (optional)",
+    "saveChanges": "Save changes"
+  },
+  "rutaForm": {
+    "errors": {
+      "min2": "Required, at least 2 characters",
+      "phone": "Invalid phone number",
+      "date": "Choose a date",
+      "time": "Format HH:MM (24h)",
+      "greaterThanZero": "Must be a number greater than 0",
+      "vehicle": "Choose a vehicle"
+    },
+    "distanceError": "The distance could not be calculated automatically. Enter it manually.",
+    "editTitle": "Edit route",
+    "newTitle": "New route",
+    "client": "Customer",
+    "phone": "Phone (optional)",
+    "origin": "Origin",
+    "destination": "Destination",
+    "addressHint": "Choose an address from the list to calculate the km automatically, or type it freely and enter the km manually.",
+    "date": "Date",
+    "time": "Time (optional)",
+    "passengers": "No. of passengers (optional)",
+    "calculatingDistance": "Calculating distance...",
+    "distance": "Distance km (optional)",
+    "pricePerKm": "Price/km (optional)",
+    "distanceAuto": "Road distance calculated automatically. You can adjust it if needed.",
+    "suggestedPrice": "Suggested price:",
+    "useThisPrice": "Use this price",
+    "vehicle": "Vehicle",
+    "status": "Status",
+    "autoCompleteAt": "Unless you change it first, this trip will be marked as completed and paid in cash at around {{time}} (usual wait to start + {{duration}} of driving + margins), or earlier if your next trip starts.",
+    "autoCompleteEndOfDay": "Unless you change it first, this trip will be marked as completed and paid in cash at the end of the day.",
+    "autoCompleteFixLater": "You can fix it later in “To review”.",
+    "finalPrice": "Final price (optional, in {{currency}})",
+    "paymentMethod": "Payment method (optional)",
+    "create": "Create route"
+  },
+  "planner": {
+    "callError": "Could not open the phone app",
+    "whatsappError": "Could not open WhatsApp",
+    "yesterday": "yesterday",
+    "tomorrow": "tomorrow",
+    "payment": "Pay",
+    "completedBy": "Completed by: {{name}}",
+    "willComplete": "Will complete itself at around {{time}}",
+    "toReview": "to review",
+    "noticeOne": "{{time}} trip completed",
+    "noticeMany": "{{count}} trips completed",
+    "noticeManyDetail": "Paid in cash · review them when you stop",
+    "loadError": "Could not load routes",
+    "reviewError": "Could not mark it as reviewed",
+    "reviewAllError": "Could not mark them as reviewed",
+    "undone": "Automatic completion undone",
+    "undoError": "Could not undo",
+    "createBlocked": "You can't create routes yet",
+    "updated": "Route updated",
+    "created": "Route created",
+    "saveError": "Could not save the route",
+    "deleted": "Trip deleted · tap it to restore it",
+    "deleteError": "Could not delete the route",
+    "updateError": "Could not update the route",
+    "needVehicle": "You need to register a vehicle before creating routes",
+    "reviewBanner": "To review ({{count}}): trips completed automatically",
+    "review": "Review",
+    "colClient": "Customer / route",
+    "colPrice": "Price",
+    "colActions": "Actions",
+    "noTime": "No time set",
+    "emptyDay": "No routes on this day",
+    "introTitle": "Trips complete themselves",
+    "introP1": "So you don't have to touch your phone while driving, each pending trip will be marked as completed and paid in cash when your next trip starts or, at the latest, once the usual wait to start (10 min), its road duration and a margin for traffic, drop-off and payment have passed.",
+    "introP2": "You'll see a short, information-only notice. If something was different (another payment method, another price or a cancelled trip), fix it later in “To review”, with the vehicle stopped.",
+    "introP3": "You can adjust the margins or turn it off in Settings.",
+    "cannotDelete": "You don't have permission to delete this trip.",
+    "call": "Call",
+    "deletedBadge": "Deleted",
+    "restoreTitle": "Deleted trip",
+    "restoreMessage": "The trip for {{name}} is deleted. Do you want to restore it? It will count again in calendars and reports.",
+    "restore": "Restore",
+    "restored": "Trip restored",
+    "restoreError": "Could not restore the trip",
+    "cannotRestore": "You don't have permission to restore this trip."
+  },
+  "completeProfile": {
+    "saveError": "Could not save your profile",
+    "title": "Complete your profile",
+    "subtitle": "We need your first and last name to continue",
+    "save": "Save and continue"
+  },
+  "register": {
+    "avatarPreview": "This is how your avatar will look",
+    "passwordValid": "Valid password"
+  },
+  "driver": {
+    "codesLoadError": "Could not load your codes",
+    "codeFormat": "The code has 8 characters (letters and numbers)",
+    "joined": "You joined successfully",
+    "invalidCode": "Invalid code",
+    "searchError": "Search failed",
+    "joinTitle": "Join an owner's code",
+    "codeLabel": "Code (8 characters)",
+    "join": "Join",
+    "noOwners": "You haven't joined any owner this month yet.\nEnter a code above to start.",
+    "searchLabel": "Search a route by customer",
+    "permStatusPayment": "change status and payment",
+    "permDelete": "delete",
+    "permNothing": "nothing",
+    "youCan": "You can: {{list}}",
+    "noRutasDay": "You have no routes on this day for this owner."
+  },
+  "rutas": {
+    "emptyDayCreate": "No routes on this day. Tap + to create one.",
+    "step1Vehicle": "Step 1: register a vehicle before creating your first route"
+  },
+  "calendar": {
+    "goToday": "Go to today",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "previous": "Previous",
+    "next": "Next",
+    "more": "more"
   }
 }

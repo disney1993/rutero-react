@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Dialog, Button } from './ui';
 import * as Clipboard from 'expo-clipboard';
 import { api, errorMessage } from '../utils/apiClient';
@@ -12,6 +13,7 @@ function currentMonth() {
 // pantalla de rutas (no en ajustes) porque es una acción sobre "mis rutas
 // de este mes", no una preferencia de cuenta.
 export default function OwnerCodeDialog({ visible, onDismiss }) {
+  const { t } = useTranslation();
   const [monthlyCode, setMonthlyCode] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -25,11 +27,11 @@ export default function OwnerCodeDialog({ visible, onDismiss }) {
       setMonthlyCode(resp.data.find((c) => c.month === currentMonth()) || null);
     } catch (err) {
       setMonthlyCode(null);
-      setMessage(errorMessage(err, 'Necesitas al menos un vehículo para generar un código'));
+      setMessage(errorMessage(err, t('ownerCode.needVehicle')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (visible) load();
@@ -42,7 +44,7 @@ export default function OwnerCodeDialog({ visible, onDismiss }) {
       const resp = await api.post('/owner/codes', { month: currentMonth() });
       setMonthlyCode(resp.data);
     } catch (err) {
-      setMessage(errorMessage(err, 'Necesitas al menos un vehículo para generar un código'));
+      setMessage(errorMessage(err, t('ownerCode.needVehicle')));
     } finally {
       setGenerating(false);
     }
@@ -51,15 +53,15 @@ export default function OwnerCodeDialog({ visible, onDismiss }) {
   const copy = async () => {
     if (!monthlyCode) return;
     await Clipboard.setStringAsync(monthlyCode.code);
-    setMessage('Código copiado al portapapeles');
+    setMessage(t('ownerCode.copied'));
   };
 
   return (
     <Dialog visible={visible} onDismiss={onDismiss}>
-      <Dialog.Title>Código para conductores</Dialog.Title>
+      <Dialog.Title>{t('ownerCode.title')}</Dialog.Title>
       <Dialog.Content>
         <Text className="opacity-70 mb-3 text-onSurface dark:text-onSurface-dark">
-          Comparte este código con quien vaya a conducir para ti este mes. Solo es válido durante el mes actual.
+          {t('ownerCode.explanation')}
         </Text>
 
         {loading ? (
@@ -70,7 +72,7 @@ export default function OwnerCodeDialog({ visible, onDismiss }) {
           </Text>
         ) : (
           <Text className="opacity-70 text-xs text-onSurface dark:text-onSurface-dark">
-            Aún no tienes un código generado este mes.
+            {t('ownerCode.none')}
           </Text>
         )}
 
@@ -79,12 +81,12 @@ export default function OwnerCodeDialog({ visible, onDismiss }) {
         )}
       </Dialog.Content>
       <Dialog.Actions>
-        <Button mode="text" onPress={onDismiss}>Cerrar</Button>
+        <Button mode="text" onPress={onDismiss}>{t('common.close')}</Button>
         {monthlyCode ? (
-          <Button mode="contained" onPress={copy}>Copiar</Button>
+          <Button mode="contained" onPress={copy}>{t('common.copy')}</Button>
         ) : (
           <Button mode="contained" onPress={generate} loading={generating} disabled={generating}>
-            Generar
+            {t('ownerCode.generate')}
           </Button>
         )}
       </Dialog.Actions>

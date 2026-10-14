@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Pressable, Text } from 'react-native';
 import Icon from './Icon';
 import { cn } from './cn';
+import { haptics } from '../../utils/haptics';
 import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
 
@@ -18,7 +19,10 @@ export default function SegmentedButtons({ value, onValueChange, buttons, style,
         return (
           <Pressable
             key={b.value}
-            onPress={() => onValueChange(b.value)}
+            onPress={() => {
+              if (!active) haptics.selection();
+              onValueChange(b.value);
+            }}
             className={cn(
               'flex-1 flex-row items-center justify-center py-2 px-2',
               active && 'bg-primary dark:bg-primary-dark',

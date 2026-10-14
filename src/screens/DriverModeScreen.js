@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ActivityIndicator, Pressable } from 'react-native';
 import { Input, Button, SegmentedButtons, IconButton, cn, PageContainer } from '../components/ui';
+import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +15,7 @@ function currentMonth() {
 }
 
 export default function DriverModeScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   const [entries, setEntries] = useState([]);
@@ -37,7 +39,7 @@ export default function DriverModeScreen() {
       setEntries(active);
       setSelectedOwnerId((prev) => prev ?? active[0]?.owner_month_code.owner_id ?? null);
     } catch (err) {
-      setJoinMessage(errorMessage(err, 'No se pudieron cargar tus códigos'));
+      setJoinMessage(errorMessage(err, t('driver.codesLoadError')));
     } finally {
       setLoadingEntries(false);
     }
@@ -49,17 +51,17 @@ export default function DriverModeScreen() {
     setCodeError('');
     const code = codeInput.trim().toUpperCase();
     if (!CODE_REGEX.test(code)) {
-      setCodeError('El código tiene 8 caracteres (letras y números)');
+      setCodeError(t('driver.codeFormat'));
       return;
     }
     setJoining(true);
     try {
       await api.post('/driver/join-code', { code, month: currentMonth() });
       setCodeInput('');
-      setJoinMessage('Te uniste correctamente');
+      setJoinMessage(t('driver.joined'));
       loadEntries();
     } catch (err) {
-      setJoinMessage(errorMessage(err, 'Código inválido'));
+      setJoinMessage(errorMessage(err, t('driver.invalidCode')));
     } finally {
       setJoining(false);
     }
@@ -76,7 +78,7 @@ export default function DriverModeScreen() {
       const resp = await api.get('/rutas', { params: { search: text } });
       setSearchResults(resp.data.data.filter((r) => r.owner_id === selectedOwnerId));
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo buscar'));
+      toastError(errorMessage(err, t('driver.searchError')));
     } finally {
       setSearching(false);
     }
@@ -91,18 +93,18 @@ export default function DriverModeScreen() {
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
       <PageContainer className="p-4 pb-0">
-        <Text className="font-medium text-onSurface dark:text-onSurface-dark">Unirme a un código de propietario</Text>
+        <Text className="font-medium text-onSurface dark:text-onSurface-dark">{t('driver.joinTitle')}</Text>
         <View className="flex-row gap-2.5 items-start mt-1">
           <View className="flex-1">
             <Input
-              label="Código (8 caracteres)"
+              label={t('driver.codeLabel')}
               value={codeInput}
               onChangeText={setCodeInput}
               autoCapitalize="characters"
               maxLength={8}
             />
           </View>
-          <Button mode="contained" onPress={handleJoin} loading={joining} disabled={joining}>Unirme</Button>
+          <Button mode="contained" onPress={handleJoin} loading={joining} disabled={joining}>{t('driver.join')}</Button>
         </View>
         {(!!codeError || !!joinMessage) && (
           <Text className={cn('text-xs mb-1', codeError ? 'text-error dark:text-error-dark' : 'opacity-70 text-onSurface dark:text-onSurface-dark')}>
@@ -117,7 +119,7 @@ export default function DriverModeScreen() {
         <View className="items-center mt-6 px-6">
           <IconButton icon="account-arrow-right-outline" size={40} disabled className="opacity-40" />
           <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">
-            Aún no te has unido a ningún propietario este mes.{'\n'}Introduce un código arriba para empezar.
+            {t('driver.noOwners')}
           </Text>
         </View>
       ) : (
@@ -136,7 +138,7 @@ export default function DriverModeScreen() {
 
           <PageContainer className="px-4 pt-2">
             <Input
-              label="Buscar una ruta por cliente"
+              label={t('driver.searchLabel')}
               value={search}
               onChangeText={onSearchChange}
               left="magnify"
@@ -147,9 +149,9 @@ export default function DriverModeScreen() {
                 {searchResults.map((ruta) => {
                   const perms = getDriverPermissions(ruta, user);
                   const canText = [
-                    perms.canChangeStatusPayment && 'cambiar estado y pago',
-                    perms.canDelete && 'eliminar',
-                  ].filter(Boolean).join(', ') || 'nada';
+                    perms.canChangeStatusPayment && t('driver.permStatusPayment'),
+                    perms.canDelete && t('driver.permDelete'),
+                  ].filter(Boolean).join(', ') || t('driver.permNothing');
                   return (
                     <Pressable
                       key={ruta.id}
@@ -160,7 +162,7 @@ export default function DriverModeScreen() {
                         {ruta.client_name} · {formatDateHuman(ruta.trip_date.slice(0, 10))}
                       </Text>
                       <Text numberOfLines={1} className="text-xs opacity-60 mt-0.5 text-onSurface dark:text-onSurface-dark">
-                        Puedes: {canText}
+                        {t('driver.youCan', { list: canText })}
                       </Text>
                     </Pressable>
                   );
@@ -178,7 +180,7 @@ export default function DriverModeScreen() {
               createExtra={{ owner_id: selectedOwnerId }}
               canDelete={(ruta) => ruta.created_by === user.id && ruta.driver_id === user.id}
               editFieldSet={() => 'driverUpdate'}
-              emptyMessage="No tienes rutas este día para este propietario."
+              emptyMessage={t('driver.noRutasDay')}
             />
           </View>
         </>

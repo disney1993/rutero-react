@@ -1,6 +1,7 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { IconButton } from '../components/ui';
 import { api } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +11,7 @@ import OwnerCodeDialog from '../components/OwnerCodeDialog';
 import SelectedUserBanner from '../components/SelectedUserBanner';
 
 export default function MyRutasScreen({ navigation }) {
+  const { t } = useTranslation();
   const { user, isAdmin } = useAuth();
   const { selectedUser } = useSelectedUser();
   const targetUser = isAdmin ? selectedUser : user;
@@ -23,7 +25,7 @@ export default function MyRutasScreen({ navigation }) {
     // sentido mientras el admin está viendo la cuenta de otro usuario.
     navigation.setOptions({
       headerRight: isAdmin ? undefined : () => (
-        <IconButton icon="account-key-outline" onPress={() => setCodeDialogVisible(true)} accessibilityLabel="Código para conductores" />
+        <IconButton icon="account-key-outline" onPress={() => setCodeDialogVisible(true)} accessibilityLabel={t('ownerCode.title')} />
       ),
     });
   }, [navigation, isAdmin]);
@@ -53,9 +55,9 @@ export default function MyRutasScreen({ navigation }) {
         filterRuta={(ruta) => ruta.owner_id === targetUser.id}
         createExtra={isAdmin ? { owner_id: targetUser.id } : {}}
         vehicles={vehicles}
-        emptyMessage="No hay rutas este día. Toca + para crear una."
+        emptyMessage={t('rutas.emptyDayCreate')}
         createBlocked={!isAdmin && loaded && vehicles.length === 0}
-        createBlockedMessage="Paso 1: registra un vehículo antes de crear tu primera ruta"
+        createBlockedMessage={t('rutas.step1Vehicle')}
         onCreateBlockedPress={() => navigation.navigate('MyVehicles')}
       />
       <OwnerCodeDialog visible={codeDialogVisible} onDismiss={() => setCodeDialogVisible(false)} />

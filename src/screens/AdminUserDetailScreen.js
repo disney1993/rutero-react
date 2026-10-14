@@ -3,18 +3,21 @@ import { View, Text, ScrollView, FlatList, ActivityIndicator } from 'react-nativ
 import { Card, Input, Button, SegmentedButtons, IconButton, FAB, PageContainer } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { api, errorMessage } from '../utils/apiClient';
 import { isValidName, isValidEmail } from '../utils/validators';
 import { useConfirm } from '../context/ConfirmContext';
-import { toastSuccess, toastError } from '../utils/toast';
+import { toastSuccess, toastError, toastInfo } from '../utils/toast';
+import VehicleListItem from '../components/VehicleListItem';
+import { sortVehiclesDefaultFirst } from '../utils/vehicles';
 import VehicleFormModal from '../components/VehicleFormModal';
 import RutasPlanner from '../components/RutasPlanner';
 
 const TABS = [
-  { value: 'profile', label: 'Perfil' },
-  { value: 'vehicles', label: 'Vehículos' },
-  { value: 'rutas', label: 'Rutas' },
-];
+  { value: 'profile', key: 'admin.tabs.profile' },
+  { value: 'vehicles', key: 'stats.vehicles' },
+  { value: 'rutas', key: 'stats.rutas' },
+].map((tab) => ({ ...tab, get label() { return i18n.t(tab.key); } }));
 
 export default function AdminUserDetailScreen({ route, navigation }) {
   const { t } = useTranslation();
@@ -47,10 +50,10 @@ export default function AdminUserDetailScreen({ route, navigation }) {
     plan !== (user.plan || 'free')
   );
   const profileErrors = {};
-  if (!isValidName(firstName)) profileErrors.firstName = 'Solo letras, entre 2 y 50 caracteres';
-  if (!isValidName(lastName)) profileErrors.lastName = 'Solo letras, entre 2 y 50 caracteres';
-  if (secondLastName.trim() && !isValidName(secondLastName)) profileErrors.secondLastName = 'Solo letras, entre 2 y 50 caracteres';
-  if (!isValidEmail(email)) profileErrors.email = 'Ingresa un email válido';
+  if (!isValidName(firstName)) profileErrors.firstName = t('validation.nameFormat');
+  if (!isValidName(lastName)) profileErrors.lastName = t('validation.nameFormat');
+  if (secondLastName.trim() && !isValidName(secondLastName)) profileErrors.secondLastName = t('validation.nameFormat');
+  if (!isValidEmail(email)) profileErrors.email = t('validation.invalidEmail');
   const profileValid = Object.keys(profileErrors).length === 0;
 
   const saveProfile = async () => {
@@ -66,9 +69,9 @@ export default function AdminUserDetailScreen({ route, navigation }) {
         plan,
       });
       setUser(resp.data);
-      toastSuccess('Usuario actualizado');
+      toastSuccess(t('admin.userUpdated'));
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo actualizar el usuario'));
+      toastError(errorMessage(err, t('admin.userUpdateError')));
     } finally {
       setSavingProfile(false);
     }
@@ -88,7 +91,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
       await api.delete(`/admin/users/${user.id}`);
       navigation.goBack();
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo eliminar el usuario'));
+      toastError(errorMessage(err, t('admin.userDeleteError')));
       setDeleting(false);
     }
   };
@@ -106,7 +109,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
       const resp = await api.get('/vehicles', { params: { owner_id: user.id } });
       setVehicles(resp.data);
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudieron cargar los vehículos'));
+      toastError(errorMessage(err, t('vehicles.loadError')));
     } finally {
       setLoadingVehicles(false);
     }
@@ -123,26 +126,30 @@ export default function AdminUserDetailScreen({ route, navigation }) {
       setVehicleFormVisible(false);
       loadVehicles();
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo guardar el vehículo'));
+      toastError(errorMessage(err, t('vehicles.saveError')));
     } finally {
       setSavingVehicle(false);
     }
   };
 
   const deleteVehicle = async (vehicle) => {
+    // Las reglas (predeterminado / con viajes) ya se comprueban en VehicleListItem.
+    // Devuelve true si se borró, para que la tarjeta no vuelva a su sitio.
     const ok = await confirm({
       title: t('alerts.confirmDeleteTitle'),
-      message: t('alerts.confirmDeleteVehicleMessage', { name: vehicle.plate || 'este vehículo' }),
+      message: t('alerts.confirmDeleteVehicleMessage', { name: vehicle.plate || t('vehicles.thisVehicle') }),
       destructive: true,
       confirmLabel: t('common.delete'),
     });
-    if (!ok) return;
+    if (!ok) return false;
 
     try {
       await api.delete(`/vehicles/${vehicle.id}`);
       loadVehicles();
+      return true;
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo eliminar (revisa si tiene rutas asociadas)'));
+      toastError(errorMessage(err, t('vehicles.deleteError')));
+      return false;
     }
   };
 
@@ -160,50 +167,50 @@ export default function AdminUserDetailScreen({ route, navigation }) {
           {user.profile_incomplete && (
             <View className="rounded-xl px-3 py-2.5 mb-3 bg-error/15 dark:bg-error-dark/20">
               <Text className="text-error dark:text-error-dark text-sm">
-                Este usuario no completó su perfil (falta nombre o apellido). Se le pedirá al iniciar sesión.
+                {t('admin.incompleteProfileHint')}
               </Text>
             </View>
           )}
 
-          <Text className="mb-1 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">Tipo de usuario (según actividad)</Text>
+          <Text className="mb-1 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('admin.userType')}</Text>
           <View className="flex-row flex-wrap gap-1.5 mb-4">
             {user.has_owner_capability && (
               <Text className="text-xs rounded px-2 py-1 bg-secondary/20 dark:bg-secondary-dark/20 text-secondary dark:text-secondary-dark">
-                Propietario
+                {t('roles.owner')}
               </Text>
             )}
             {user.has_driver_capability && (
               <Text className="text-xs rounded px-2 py-1 bg-tertiary/20 dark:bg-tertiary-dark/20 text-tertiary dark:text-tertiary-dark">
-                Conductor
+                {t('roles.driver')}
               </Text>
             )}
             {!user.has_owner_capability && !user.has_driver_capability && (
               <Text className="text-xs rounded px-2 py-1 bg-surfaceDisabled dark:bg-surfaceDisabled-dark text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-                Sin actividad todavía (sin vehículos ni códigos)
+                {t('admin.noActivityYet')}
               </Text>
             )}
           </View>
 
           <View className="flex-row gap-2.5">
             <View className="flex-1">
-              <Input label="Nombre" value={firstName} onChangeText={setFirstName} error={profileErrors.firstName} />
+              <Input label={t('profile.firstName')} value={firstName} onChangeText={setFirstName} error={profileErrors.firstName} />
             </View>
             <View className="flex-1">
-              <Input label="Primer apellido" value={lastName} onChangeText={setLastName} error={profileErrors.lastName} />
+              <Input label={t('profile.lastName')} value={lastName} onChangeText={setLastName} error={profileErrors.lastName} />
             </View>
           </View>
 
-          <Input label="Segundo apellido" value={secondLastName} onChangeText={setSecondLastName} error={profileErrors.secondLastName} />
-          <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" error={profileErrors.email} />
+          <Input label={t('admin.secondLastName')} value={secondLastName} onChangeText={setSecondLastName} error={profileErrors.secondLastName} />
+          <Input label={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" error={profileErrors.email} />
 
-          <Text className="mt-2 mb-2 font-medium text-onSurface dark:text-onSurface-dark">Rol</Text>
-          <SegmentedButtons value={role} onValueChange={setRole} buttons={[{ value: 'user', label: 'Usuario' }, { value: 'admin', label: 'Admin' }]} className="mb-1" />
+          <Text className="mt-2 mb-2 font-medium text-onSurface dark:text-onSurface-dark">{t('admin.role')}</Text>
+          <SegmentedButtons value={role} onValueChange={setRole} buttons={[{ value: 'user', label: t('nav.user') }, { value: 'admin', label: t('roles.admin') }]} className="mb-1" />
 
-          <Text className="mt-2 mb-2 font-medium text-onSurface dark:text-onSurface-dark">Plan</Text>
-          <SegmentedButtons value={plan} onValueChange={setPlan} buttons={[{ value: 'free', label: 'Gratuito' }, { value: 'premium', label: 'Premium' }]} className="mb-1" />
+          <Text className="mt-2 mb-2 font-medium text-onSurface dark:text-onSurface-dark">{t('admin.plan')}</Text>
+          <SegmentedButtons value={plan} onValueChange={setPlan} buttons={[{ value: 'free', label: t('admin.planFree') }, { value: 'premium', label: t('admin.planPremium') }]} className="mb-1" />
 
           <Button mode="contained" onPress={saveProfile} loading={savingProfile} disabled={savingProfile || !profileDirty || !profileValid} className="mt-4">
-            Guardar cambios
+            {t('form.saveChanges')}
           </Button>
           <Button
             mode="outlined"
@@ -213,7 +220,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
             className="mt-3 border-error dark:border-error-dark"
             textClassName="text-error dark:text-error-dark"
           >
-            Eliminar usuario
+            {t('admin.deleteUser')}
           </Button>
         </PageContainer>
         </ScrollView>
@@ -224,29 +231,27 @@ export default function AdminUserDetailScreen({ route, navigation }) {
           {loadingVehicles ? <ActivityIndicator className="mt-6" /> : (
             <PageContainer className="flex-1">
             <FlatList
-              data={vehicles}
+              data={sortVehiclesDefaultFirst(vehicles)}
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
               ListEmptyComponent={
                 <View className="items-center mt-6">
                   <IconButton icon="car-outline" size={40} disabled className="opacity-40" />
-                  <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">Sin vehículos</Text>
+                  <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">{t('admin.noVehicles')}</Text>
                 </View>
               }
+              ListFooterComponent={vehicles.length > 0 ? (
+                <Text className="text-center text-xs mt-2 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                  {t('vehicles.swipeHint')}
+                </Text>
+              ) : null}
               renderItem={({ item }) => (
-                <Card className="mb-2" onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }}>
-                  <Card.Content>
-                    <View className="flex-row items-center gap-1.5">
-                      <Text className="text-base font-medium text-onSurface dark:text-onSurface-dark">{item.plate || 'Sin matrícula'}</Text>
-                      {item.is_default && <Text className="text-xs font-bold text-primary dark:text-primary-dark">· Predeterminado</Text>}
-                    </View>
-                    <Text className="text-xs text-onSurface dark:text-onSurface-dark">{[item.make, item.model].filter(Boolean).join(' ')}</Text>
-                  </Card.Content>
-                  <Card.Actions>
-                    <IconButton icon="pencil" onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }} />
-                    <IconButton icon="delete" onPress={() => deleteVehicle(item)} />
-                  </Card.Actions>
-                </Card>
+                <VehicleListItem
+                  vehicle={item}
+                  onEdit={(v) => { setEditingVehicle(v); setVehicleFormVisible(true); }}
+                  onDelete={deleteVehicle}
+                  onBlocked={toastInfo}
+                />
               )}
             />
             </PageContainer>
@@ -274,7 +279,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
             filterRuta={(ruta) => ruta.owner_id === user.id}
             createExtra={{ owner_id: user.id }}
             vehicles={vehicles}
-            emptyMessage="Este usuario no tiene rutas este día."
+            emptyMessage={t('admin.noRutasDay')}
           />
         </View>
       )}

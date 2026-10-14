@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 import { Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dialog, Button } from '../components/ui';
+import { haptics } from '../utils/haptics';
 
 const ConfirmContext = createContext(null);
 
@@ -11,6 +12,8 @@ export function ConfirmProvider({ children }) {
   const [request, setRequest] = useState(null);
 
   const confirm = (options) => new Promise((resolve) => {
+    // Aviso táctil antes de una acción destructiva (borrar, deshacer...).
+    if (options?.destructive) haptics.warning();
     setRequest({ ...options, resolve });
   });
 

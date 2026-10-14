@@ -10,15 +10,18 @@ import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { STATUS_COLORS, statusLabel } from '../utils/rutas';
 import { formatCurrency } from '../utils/currency';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 const TYPE_FILTERS = [
-  { value: '', label: 'Todos' },
-  { value: 'owner', label: 'Propietarios' },
-  { value: 'driver', label: 'Conductores' },
-  { value: 'incomplete', label: 'Perfil incompleto' },
-];
+  { value: '', key: 'admin.filters.all' },
+  { value: 'owner', key: 'admin.filters.owners' },
+  { value: 'driver', key: 'admin.filters.drivers' },
+  { value: 'incomplete', key: 'admin.filters.incomplete' },
+].map((f) => ({ ...f, get label() { return i18n.t(f.key); } }));
 
 export default function AdminDashboardScreen({ navigation }) {
+  const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   const { width } = useWindowDimensions();
@@ -36,7 +39,7 @@ export default function AdminDashboardScreen({ navigation }) {
       const resp = await api.get('/admin/reports/summary');
       setSummary(resp.data);
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudo cargar el resumen'));
+      toastError(errorMessage(err, t('stats.loadError')));
     }
   }, []);
 
@@ -48,7 +51,7 @@ export default function AdminDashboardScreen({ navigation }) {
       });
       setUsers(resp.data);
     } catch (err) {
-      toastError(errorMessage(err, 'No se pudieron cargar los usuarios'));
+      toastError(errorMessage(err, t('admin.usersLoadError')));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -89,11 +92,11 @@ export default function AdminDashboardScreen({ navigation }) {
             <View className="mb-2">
               {summary && (
                 <View className="flex-row flex-wrap gap-2 mb-3">
-                  <StatTile label="Usuarios" value={summary.users_total} />
-                  <StatTile label="Propietarios" value={summary.owners_total} />
-                  <StatTile label="Conductores" value={summary.drivers_total} />
-                  <StatTile label="Vehículos" value={summary.vehicles_total} />
-                  <StatTile label="Ingresos (completadas)" value={formatCurrency(summary.revenue_completed)} />
+                  <StatTile label={t('admin.users')} value={summary.users_total} />
+                  <StatTile label={t('admin.filters.owners')} value={summary.owners_total} />
+                  <StatTile label={t('admin.filters.drivers')} value={summary.drivers_total} />
+                  <StatTile label={t('stats.vehicles')} value={summary.vehicles_total} />
+                  <StatTile label={t('stats.revenue')} value={formatCurrency(summary.revenue_completed)} />
                 </View>
               )}
 
@@ -102,7 +105,7 @@ export default function AdminDashboardScreen({ navigation }) {
                   {pieData.length > 0 && (
                     <Card className={isWide ? 'flex-1' : undefined}>
                       <Card.Content className="items-center">
-                        <Text className="self-start font-medium mb-2 text-onSurface dark:text-onSurface-dark">Rutas por estado</Text>
+                        <Text className="self-start font-medium mb-2 text-onSurface dark:text-onSurface-dark">{t('stats.rutasByStatus')}</Text>
                         <PieChart data={pieData} donut radius={70} innerRadius={44} innerCircleColor={themeColors.surface} />
                         <View className="flex-row flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
                           {Object.keys(rutasByStatus).filter((s) => rutasByStatus[s] > 0).map((status) => (
@@ -121,7 +124,7 @@ export default function AdminDashboardScreen({ navigation }) {
                   {topOwners.length > 0 && (
                     <Card className={isWide ? 'flex-1' : undefined}>
                       <Card.Content>
-                        <Text className="font-medium mb-3 text-onSurface dark:text-onSurface-dark">Top propietarios (rutas)</Text>
+                        <Text className="font-medium mb-3 text-onSurface dark:text-onSurface-dark">{t('admin.topOwners')}</Text>
                         {topOwners.map((o) => (
                           <View key={o.id} className="mb-2.5">
                             <View className="flex-row justify-between mb-1">
@@ -143,7 +146,7 @@ export default function AdminDashboardScreen({ navigation }) {
               )}
 
               <Input
-                label="Buscar usuario (nombre o email)"
+                label={t('admin.searchUser')}
                 value={search}
                 onChangeText={onSearchChange}
                 left="magnify"
@@ -172,9 +175,9 @@ export default function AdminDashboardScreen({ navigation }) {
               {isWide && users.length > 0 && (
                 <View className="flex-row items-center px-3 pt-3 gap-3">
                   <Text className="w-11 text-xs opacity-60"> </Text>
-                  <Text className="flex-1 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Nombre</Text>
-                  <Text className="flex-[1.2] text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Email</Text>
-                  <Text className="w-40 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">Estado</Text>
+                  <Text className="flex-1 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{t('admin.colName')}</Text>
+                  <Text className="flex-[1.2] text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{t('auth.email')}</Text>
+                  <Text className="w-40 text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{t('rutaForm.status')}</Text>
                 </View>
               )}
 
@@ -185,7 +188,7 @@ export default function AdminDashboardScreen({ navigation }) {
             !loading && (
               <View className="flex-1 items-center justify-center py-12">
                 <IconButton icon="account-search-outline" size={40} disabled className="opacity-40" />
-                <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">Sin resultados</Text>
+                <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">{t('admin.noResults')}</Text>
               </View>
             )
           }
@@ -204,10 +207,10 @@ function UserRow({ item, isWide, themeColors, navigation }) {
 
   const badges = (
     <>
-      {item.profile_incomplete && <StatusBadge tone="error">Perfil incompleto</StatusBadge>}
-      {item.has_owner_capability && <StatusBadge tone="secondary">Propietario</StatusBadge>}
-      {item.has_driver_capability && <StatusBadge tone="tertiary">Conductor</StatusBadge>}
-      {!item.profile_incomplete && !hasActivity && <StatusBadge tone="neutral">Sin actividad</StatusBadge>}
+      {item.profile_incomplete && <StatusBadge tone="error">{i18n.t('admin.filters.incomplete')}</StatusBadge>}
+      {item.has_owner_capability && <StatusBadge tone="secondary">{i18n.t('roles.owner')}</StatusBadge>}
+      {item.has_driver_capability && <StatusBadge tone="tertiary">{i18n.t('roles.driver')}</StatusBadge>}
+      {!item.profile_incomplete && !hasActivity && <StatusBadge tone="neutral">{i18n.t('stats.noActivity')}</StatusBadge>}
     </>
   );
 
