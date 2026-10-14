@@ -1,7 +1,8 @@
 import i18n, { dateLocale } from '../i18n';
 
-// `label` es un getter: se traduce al leerlo, con el idioma activo.
-export const STATUS_OPTIONS = ['pending', 'completed', 'cancelled'].map((value) => ({
+// Estados editables en formulario y menú rápido. Cancelar no es un estado
+// que se elija: es el swipe a la izquierda (borrado blando).
+export const STATUS_OPTIONS = ['pending', 'completed'].map((value) => ({
   value,
   get label() { return i18n.t(`status.${value}`); },
 }));
@@ -13,7 +14,7 @@ export const STATUS_COLORS = {
 };
 
 export function statusLabel(status) {
-  return STATUS_OPTIONS.find((s) => s.value === status)?.label || status;
+  return i18n.t(`status.${status}`, { defaultValue: status });
 }
 
 // Fecha de "hoy" en el calendario local del dispositivo (no UTC): usar

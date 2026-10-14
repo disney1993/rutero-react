@@ -77,19 +77,28 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
     : null;
   const canChangeStatusPayment = !isDeleted && getDriverPermissions(item, user).canChangeStatusPayment;
 
-  // Tocar la fila abre el detalle (edición); deslizar a la izquierda borra
-  // (o enseña un candado si no hay permiso); WhatsApp y llamar son columnas
-  // propias a la derecha.
+  // Gestos: → completar (o devolver a pendiente si ya lo está);
+  // ← cancelar (= borrado blando). Tocar un cancelado lo restaura.
+  const nextStatus = item.status === 'completed' ? 'pending' : 'completed';
   return (
     <SwipeToDelete
       rounded={false}
       enabled={!isDeleted}
       onDelete={() => onDelete(item)}
+      deleteLabel={t('planner.cancel')}
+      deleteIcon="close-circle-outline"
       blockedReason={canDelete ? null : t('planner.cannotDelete')}
       onBlocked={toastInfo}
       onSwiped={onSwiped}
       peek={peek}
       onPeekDone={onPeekDone}
+      rightSwipe={{
+        label: t(`status.${nextStatus}`),
+        icon: nextStatus === 'completed' ? 'check-circle-outline' : 'clock-outline',
+        color: STATUS_COLORS[nextStatus],
+        onTrigger: () => onQuickUpdate(item, { status: nextStatus }),
+        blockedReason: canChangeStatusPayment ? null : t('planner.cannotChangeStatus'),
+      }}
     >
     <View className="flex-row items-stretch bg-background dark:bg-background-dark border-b border-border dark:border-border-dark">
     <Pressable
@@ -136,7 +145,7 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
             <Text style={{ fontVariant: ['tabular-nums'] }} className="opacity-80 text-xs text-onSurface dark:text-onSurface-dark">
               {item.trip_time}{dayTag ? ` (${dayTag})` : ''}
             </Text>
-            {isDeleted && <StatusBadge tone="error">{t('planner.deletedBadge')}</StatusBadge>}
+            {isDeleted && <StatusBadge tone="error">{t('status.cancelled')}</StatusBadge>}
             <Menu
               visible={paymentMenuVisible}
               onDismiss={() => setPaymentMenuVisible(false)}
@@ -486,14 +495,6 @@ export default function RutasPlanner({
   };
 
   const confirmDelete = async (ruta) => {
-    const ok = await confirm({
-      title: t('alerts.confirmDeleteTitle'),
-      message: t('alerts.confirmDeleteRutaMessage', { name: ruta.client_name }),
-      destructive: true,
-      confirmLabel: t('common.delete'),
-    });
-    if (!ok) return false;
-
     try {
       await api.delete(`/rutas/${ruta.id}`);
       toastSuccess(t('planner.deleted'));
