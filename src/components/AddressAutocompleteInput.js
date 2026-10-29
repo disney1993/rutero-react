@@ -12,7 +12,7 @@ const MIN_CHARS = 3;
 // texto se guarda igual como dirección libre — solo que sin coordenadas,
 // por lo que no se podrá calcular la distancia automáticamente para ese
 // tramo (se puede introducir el km a mano).
-export default function AddressAutocompleteInput({ label, value, onChangeText, onSelectPlace, error }) {
+export default function AddressAutocompleteInput({ label, value, onChangeText, onSelectPlace, error, required, placeholder }) {
   const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,8 +57,10 @@ export default function AddressAutocompleteInput({ label, value, onChangeText, o
     <View style={{ position: 'relative', zIndex: 10 }}>
       <Input
         label={label}
+        required={required}
         value={value}
         onChangeText={onChangeText}
+        placeholder={placeholder}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
         error={error}

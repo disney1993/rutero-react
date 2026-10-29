@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, useWindowDimensions } from 'react-native';
-import { PieChart } from 'react-native-gifted-charts';
 import { Card, Input, Avatar, IconButton, PageContainer, cn, StatTile, StatusBadge } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, errorMessage } from '../utils/apiClient';
@@ -8,17 +7,14 @@ import { getInitials } from '../utils/avatar';
 import { toastError } from '../utils/toast';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
-import { STATUS_COLORS, statusLabel } from '../utils/rutas';
-import { formatCurrency } from '../utils/currency';
 import { useTranslation } from 'react-i18next';
-import i18n from '../i18n';
 
 const TYPE_FILTERS = [
   { value: '', key: 'admin.filters.all' },
   { value: 'owner', key: 'admin.filters.owners' },
   { value: 'driver', key: 'admin.filters.drivers' },
   { value: 'incomplete', key: 'admin.filters.incomplete' },
-].map((f) => ({ ...f, get label() { return i18n.t(f.key); } }));
+];
 
 export default function AdminDashboardScreen({ navigation }) {
   const { t } = useTranslation();
@@ -41,7 +37,7 @@ export default function AdminDashboardScreen({ navigation }) {
     } catch (err) {
       toastError(errorMessage(err, t('stats.loadError')));
     }
-  }, []);
+  }, [t]);
 
   const loadUsers = useCallback(async (term, type, { silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -56,7 +52,7 @@ export default function AdminDashboardScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(useCallback(() => { loadSummary(); loadUsers(search, typeFilter); }, [loadSummary]));
 
@@ -67,18 +63,6 @@ export default function AdminDashboardScreen({ navigation }) {
     loadSummary();
     loadUsers(search, typeFilter, { silent: true });
   };
-
-  const rutasByStatus = summary?.rutas_by_status || {};
-  const pieData = Object.entries(rutasByStatus)
-    .filter(([, count]) => count > 0)
-    .map(([status, count]) => ({ value: count, color: STATUS_COLORS[status] || themeColors.surfaceDisabled, text: String(count) }));
-
-  const topOwners = (summary?.top_owners || []).map((o) => ({
-    id: o.owner_id,
-    label: `${o.owner?.first_name || ''} ${o.owner?.last_name || ''}`.trim() || `#${o.owner_id}`,
-    count: o.rutas_count,
-  }));
-  const topOwnersMax = Math.max(1, ...topOwners.map((o) => o.count));
 
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
@@ -95,53 +79,6 @@ export default function AdminDashboardScreen({ navigation }) {
                   <StatTile label={t('admin.users')} value={summary.users_total} />
                   <StatTile label={t('admin.filters.owners')} value={summary.owners_total} />
                   <StatTile label={t('admin.filters.drivers')} value={summary.drivers_total} />
-                  <StatTile label={t('stats.vehicles')} value={summary.vehicles_total} />
-                  <StatTile label={t('stats.revenue')} value={formatCurrency(summary.revenue_completed)} />
-                </View>
-              )}
-
-              {summary && (pieData.length > 0 || topOwners.length > 0) && (
-                <View className={cn('gap-3 mb-3', isWide && 'flex-row')}>
-                  {pieData.length > 0 && (
-                    <Card className={isWide ? 'flex-1' : undefined}>
-                      <Card.Content className="items-center">
-                        <Text className="self-start font-medium mb-2 text-onSurface dark:text-onSurface-dark">{t('stats.rutasByStatus')}</Text>
-                        <PieChart data={pieData} donut radius={70} innerRadius={44} innerCircleColor={themeColors.surface} />
-                        <View className="flex-row flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
-                          {Object.keys(rutasByStatus).filter((s) => rutasByStatus[s] > 0).map((status) => (
-                            <View key={status} className="flex-row items-center gap-1.5">
-                              <View style={{ backgroundColor: STATUS_COLORS[status] }} className="w-2.5 h-2.5 rounded-full" />
-                              <Text className="text-xs text-onSurface dark:text-onSurface-dark">
-                                {statusLabel(status)} ({rutasByStatus[status]})
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      </Card.Content>
-                    </Card>
-                  )}
-
-                  {topOwners.length > 0 && (
-                    <Card className={isWide ? 'flex-1' : undefined}>
-                      <Card.Content>
-                        <Text className="font-medium mb-3 text-onSurface dark:text-onSurface-dark">{t('admin.topOwners')}</Text>
-                        {topOwners.map((o) => (
-                          <View key={o.id} className="mb-2.5">
-                            <View className="flex-row justify-between mb-1">
-                              <Text numberOfLines={1} className="flex-1 text-xs mr-2 text-onSurface dark:text-onSurface-dark">{o.label}</Text>
-                              <Text className="text-xs font-medium text-onSurface dark:text-onSurface-dark">{o.count}</Text>
-                            </View>
-                            <View className="h-2 rounded-full overflow-hidden bg-surfaceDisabled dark:bg-surfaceDisabled-dark">
-                              <View
-                                style={{ width: `${Math.max(4, Math.round((o.count / topOwnersMax) * 100))}%`, backgroundColor: themeColors.primary }}
-                                className="h-2 rounded-full"
-                              />
-                            </View>
-                          </View>
-                        ))}
-                      </Card.Content>
-                    </Card>
-                  )}
                 </View>
               )}
 
@@ -166,7 +103,7 @@ export default function AdminDashboardScreen({ navigation }) {
                     )}
                   >
                     <Text className={cn('text-xs', typeFilter === f.value ? 'text-white' : 'text-onSurface dark:text-onSurface-dark')}>
-                      {f.label}
+                      {t(f.key)}
                     </Text>
                   </Pressable>
                 ))}
@@ -202,15 +139,16 @@ export default function AdminDashboardScreen({ navigation }) {
 }
 
 function UserRow({ item, isWide, themeColors, navigation }) {
+  const { t } = useTranslation();
   const displayName = `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email;
   const hasActivity = item.has_owner_capability || item.has_driver_capability;
 
   const badges = (
     <>
-      {item.profile_incomplete && <StatusBadge tone="error">{i18n.t('admin.filters.incomplete')}</StatusBadge>}
-      {item.has_owner_capability && <StatusBadge tone="secondary">{i18n.t('roles.owner')}</StatusBadge>}
-      {item.has_driver_capability && <StatusBadge tone="tertiary">{i18n.t('roles.driver')}</StatusBadge>}
-      {!item.profile_incomplete && !hasActivity && <StatusBadge tone="neutral">{i18n.t('stats.noActivity')}</StatusBadge>}
+      {item.profile_incomplete && <StatusBadge tone="error">{t('admin.filters.incomplete')}</StatusBadge>}
+      {item.has_owner_capability && <StatusBadge tone="secondary">{t('roles.owner')}</StatusBadge>}
+      {item.has_driver_capability && <StatusBadge tone="tertiary">{t('roles.driver')}</StatusBadge>}
+      {!item.profile_incomplete && !hasActivity && <StatusBadge tone="neutral">{t('stats.noActivity')}</StatusBadge>}
     </>
   );
 

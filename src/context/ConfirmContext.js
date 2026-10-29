@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Dialog, Button } from '../components/ui';
+import Dialog from '../components/ui/Dialog';
+import Button from '../components/ui/Button';
 import { haptics } from '../utils/haptics';
 
-const ConfirmContext = createContext(null);
+// Same Fast Refresh / dual-module guard as AuthContext.
+const ConfirmContext =
+  globalThis.__RUTERO_CONFIRM_CONTEXT__ ??
+  (globalThis.__RUTERO_CONFIRM_CONTEXT__ = createContext(null));
 
 // Confirmación imperativa tipo SweetAlert (const ok = await confirm({...})).
 export function ConfirmProvider({ children }) {

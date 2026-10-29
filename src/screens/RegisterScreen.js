@@ -140,7 +140,11 @@ export default function RegisterScreen({ navigation }) {
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              inputMode="email"
+              autoComplete="email"
+              textContentType="emailAddress"
               left="email-outline"
               error={showFieldError('email') ? errors.email : undefined}
             />
@@ -150,6 +154,10 @@ export default function RegisterScreen({ navigation }) {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="new-password"
+              textContentType="newPassword"
               left="lock-outline"
               right={showPassword ? 'eye-off-outline' : 'eye-outline'}
               onRightPress={() => setShowPassword((v) => !v)}

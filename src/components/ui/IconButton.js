@@ -4,14 +4,27 @@ import Icon from './Icon';
 import { cn } from './cn';
 import { haptics } from '../../utils/haptics';
 
-export default function IconButton({ icon, size = 24, onPress, disabled = false, iconColor, style, className }) {
+export default function IconButton({
+  icon,
+  size = 24,
+  onPress,
+  disabled = false,
+  iconColor,
+  style,
+  className,
+  accessibilityLabel,
+  ...rest
+}) {
   return (
     <Pressable
       onPress={onPress && ((e) => { haptics.light(); onPress(e); })}
       disabled={disabled}
       hitSlop={8}
       style={style}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={onPress ? 'button' : undefined}
       className={cn('items-center justify-center rounded-full p-2 active:bg-black/10 dark:active:bg-white/10', disabled && 'opacity-40', className)}
+      {...rest}
     >
       <Icon name={icon} size={size} color={iconColor} />
     </Pressable>

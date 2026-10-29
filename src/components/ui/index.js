@@ -1,3 +1,6 @@
+// Light UI primitives only. Heavy modules (color picker / payment SVG marks /
+// native selects) stay on direct import paths so Home/AppTabs do not evaluate
+// reanimated-color-picker or react-native-svg just to show a PageContainer.
 export { cn } from './cn';
 export { default as Icon } from './Icon';
 export { default as Button } from './Button';
@@ -12,12 +15,8 @@ export { default as SegmentedButtons } from './SegmentedButtons';
 export { default as Dialog } from './Dialog';
 export { default as Menu } from './Menu';
 export { default as PageContainer } from './PageContainer';
-export { default as ColorPickerField, CAR_COLOR_PALETTE, KNOWN_CAR_COLORS, carColorToHex } from './ColorPickerField';
-export { default as PaymentMethodField, PAYMENT_METHODS, getPaymentMethod, getPaymentMethodColor } from './PaymentMethodField';
 export { default as StatTile } from './StatTile';
 export { default as StatusBadge, BADGE_TONES } from './StatusBadge';
 export { default as VehicleTypeIcon, VEHICLE_TYPES, getVehicleType } from './VehicleTypeIcon';
-export { default as VehicleTypeSelect } from './VehicleTypeSelect';
-export { default as NativeSelect } from './NativeSelect';
 export { default as FieldLabel } from './FieldLabel';
 export { default as SwipeToDelete } from './SwipeToDelete';

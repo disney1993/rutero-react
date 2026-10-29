@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Card, Icon, SwipeToDelete, VehicleTypeIcon, carColorToHex } from './ui';
+import { Card, Icon, SwipeToDelete, VehicleTypeIcon } from './ui';
+import { carColorToHex } from '../utils/carColors';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { vehicleDeleteBlockReason } from '../utils/vehicles';

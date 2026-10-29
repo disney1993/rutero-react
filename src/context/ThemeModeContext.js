@@ -5,7 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'rutero.themeMode'; // 'system' | 'light' | 'dark'
 
-const ThemeModeContext = createContext(null);
+// Same Fast Refresh / dual-module guard as AuthContext.
+const ThemeModeContext =
+  globalThis.__RUTERO_THEME_MODE_CONTEXT__ ??
+  (globalThis.__RUTERO_THEME_MODE_CONTEXT__ = createContext(null));
 
 export function ThemeModeProvider({ children }) {
   const systemScheme = useColorScheme();

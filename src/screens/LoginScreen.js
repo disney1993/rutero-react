@@ -104,7 +104,11 @@ export default function LoginScreen({ navigation }) {
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              inputMode="email"
+              autoComplete="email"
+              textContentType="emailAddress"
               left="email-outline"
               className="mb-3.5"
             />
@@ -113,6 +117,10 @@ export default function LoginScreen({ navigation }) {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="password"
+              textContentType="password"
               left="lock-outline"
               right={showPassword ? 'eye-off-outline' : 'eye-outline'}
               onRightPress={() => setShowPassword((v) => !v)}

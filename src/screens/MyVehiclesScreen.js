@@ -21,7 +21,7 @@ export default function MyVehiclesScreen() {
   const confirm = useConfirm();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, refreshUser } = useAuth();
   const { selectedUser } = useSelectedUser();
   const targetUser = isAdmin ? selectedUser : user;
 
@@ -77,6 +77,8 @@ export default function MyVehiclesScreen() {
       } else {
         await api.post('/vehicles', isAdmin ? { ...payload, owner_id: targetUser.id } : payload);
         toastSuccess(t('vehicles.added'));
+        // El primer vehículo activa has_owner_capability en la API (pestaña Vehículos, códigos…).
+        if (!isAdmin) await refreshUser();
       }
       setFormVisible(false);
       load();

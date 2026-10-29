@@ -43,6 +43,14 @@ export function formatDateHuman(iso) {
   return d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+/** Display-only dd/mm/yyyy; value stored/sent as YYYY-MM-DD. */
+export function formatDateDMY(iso) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).slice(0, 10).split('-');
+  if (!y || !m || !d) return '';
+  return `${d}/${m}/${y}`;
+}
+
 export const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 // Hora actual redondeada hacia arriba al siguiente cuarto de hora (1:05 ->

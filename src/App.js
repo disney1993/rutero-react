@@ -96,14 +96,12 @@ function ThemedApp() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <AuthProvider>
-        <PreferencesSync />
-        <ConfirmProvider>
-          <SelectedUserProvider>
-            <RootNavigator navTheme={navTheme} />
-          </SelectedUserProvider>
-        </ConfirmProvider>
-      </AuthProvider>
+      <PreferencesSync />
+      <ConfirmProvider>
+        <SelectedUserProvider>
+          <RootNavigator navTheme={navTheme} />
+        </SelectedUserProvider>
+      </ConfirmProvider>
       <FlashMessage position="top" />
     </>
   );
@@ -118,11 +116,15 @@ export default function App() {
 
   if (!i18nReady) return null;
 
+  // AuthProvider wraps the whole themed tree so every tab/stack screen and
+  // headerRight (ModeIndicator) share one provider — including lazy getComponent.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeModeProvider>
-          <ThemedApp />
+          <AuthProvider>
+            <ThemedApp />
+          </AuthProvider>
         </ThemeModeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

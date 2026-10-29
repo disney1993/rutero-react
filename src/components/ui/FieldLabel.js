@@ -5,7 +5,7 @@ import { Text } from 'react-native';
 export default function FieldLabel({ children, required }) {
   if (!children) return null;
   return (
-    <Text className="mb-1 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+    <Text className="mb-0.5 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
       {children}
       {required && <Text className="text-error dark:text-error-dark"> *</Text>}
     </Text>

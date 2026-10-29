@@ -2,67 +2,59 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { cn } from './cn';
-import i18n from '../../i18n';
 import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
+import {
+  PAYMENT_METHODS,
+  getPaymentMethod,
+  getPaymentMethodColor,
+} from '../../utils/paymentMethods';
+import { PaymentMethodIcon } from './PaymentMethodIcons';
+import PaymentMethodBadge from './PaymentMethodBadge';
 
-// Colores identificativos + siglas de 2 letras: pensado para que, con el
-// uso, la sigla sola (mostrada en las filas de rutas) baste para reconocer
-// el método sin tener que leer la etiqueta completa cada vez.
-// Bizum no tiene color fijo aquí: usa el color de marca de la app (primary
-// del tema activo), resuelto en getPaymentMethodColor.
-// `label` es un getter traducido; `value` es lo que se guarda en la API.
-export const PAYMENT_METHODS = [
-  { value: 'bizum', code: 'PB', color: null },
-  { value: 'tarjeta', code: 'PT', color: '#2563EB' },
-  { value: 'efectivo', code: 'PE', color: '#16A34A' },
-  { value: 'no_pagado', code: 'NP', color: '#D64545' },
-].map((m) => Object.defineProperty(m, 'label', { get: () => i18n.t(`payment.${m.value}`), enumerable: true }));
+export { PAYMENT_METHODS, getPaymentMethod, getPaymentMethodColor, PaymentMethodBadge };
 
-export function getPaymentMethod(value) {
-  return PAYMENT_METHODS.find((m) => m.value === value) || null;
-}
-
-// Color a pintar para un método de pago: el suyo propio, o el color de marca
-// de la app si no tiene uno fijo (caso de Bizum).
-export function getPaymentMethodColor(method, themeColors) {
-  if (!method) return themeColors.surfaceDisabled;
-  return method.color || themeColors.primary;
-}
-
-function Chip({ method, color, selected, onPress }) {
+function Chip({ method, color, selected, onPress, compact }) {
   return (
-    <Pressable onPress={onPress} accessibilityLabel={method.label} className="items-center mr-2.5 mb-2 w-16">
+    <Pressable
+      onPress={onPress}
+      accessibilityLabel={method.label}
+      className={cn('items-center', compact ? 'mr-1.5 mb-1 w-11' : 'mr-2 mb-1.5 w-14')}
+    >
       <View
         style={{ backgroundColor: color }}
         className={cn(
-          'w-14 h-10 rounded-xl items-center justify-center border-2',
+          'rounded-xl items-center justify-center border-2',
+          compact ? 'w-10 h-8' : 'w-12 h-9',
           selected ? 'border-onSurface dark:border-onSurface-dark' : 'border-transparent'
         )}
       >
-        <Text className="text-white font-bold">{method.code}</Text>
+        <PaymentMethodIcon methodValue={method.value} size={compact ? 18 : 20} color="#fff" />
       </View>
-      <Text numberOfLines={1} className="text-[10px] mt-1 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-        {method.label}
-      </Text>
+      {!compact && (
+        <Text numberOfLines={1} className="text-[10px] mt-0.5 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+          {method.label}
+        </Text>
+      )}
     </Pressable>
   );
 }
 
-export default function PaymentMethodField({ label, value, onChange, className }) {
+export default function PaymentMethodField({ label, value, onChange, className, compact = false }) {
   const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   const matched = getPaymentMethod(value);
-  // Un valor guardado que ya no está en la lista (p. ej. "transferencia" de
-  // antes de este selector): se muestra igual, sin romper nada.
+  // Legacy stored values (e.g. "transferencia") still render without breaking.
   const isLegacyValue = !!value && !matched;
 
   return (
     <View className={className}>
       {!!label && (
-        <View className="flex-row items-center justify-between mb-1">
-          <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{label}</Text>
+        <View className={cn('flex-row items-center justify-between', compact ? 'mb-0.5' : 'mb-1')}>
+          <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark" numberOfLines={1}>
+            {label}
+          </Text>
           {!!value && (
             <Pressable onPress={() => onChange('')}>
               <Text className="text-xs text-primary dark:text-primary-dark">{t('common.remove')}</Text>
@@ -78,18 +70,26 @@ export default function PaymentMethodField({ label, value, onChange, className }
             color={getPaymentMethodColor(m, themeColors)}
             selected={matched?.value === m.value}
             onPress={() => onChange(m.value)}
+            compact={compact}
           />
         ))}
         {isLegacyValue && (
-          <View className="items-center mr-2.5 mb-2 w-16">
-            <View className="w-14 h-10 rounded-xl items-center justify-center bg-surfaceDisabled dark:bg-surfaceDisabled-dark">
+          <View className={cn('items-center', compact ? 'mr-1.5 mb-1 w-11' : 'mr-2 mb-1.5 w-14')}>
+            <View
+              className={cn(
+                'rounded-xl items-center justify-center bg-surfaceDisabled dark:bg-surfaceDisabled-dark',
+                compact ? 'w-10 h-8' : 'w-12 h-9'
+              )}
+            >
               <Text numberOfLines={1} className="text-onSurfaceVariant dark:text-onSurfaceVariant-dark font-bold text-xs">
                 {value.slice(0, 2).toUpperCase()}
               </Text>
             </View>
-            <Text numberOfLines={1} className="text-[10px] mt-1 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-              {value}
-            </Text>
+            {!compact && (
+              <Text numberOfLines={1} className="text-[10px] mt-0.5 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                {value}
+              </Text>
+            )}
           </View>
         )}
       </View>

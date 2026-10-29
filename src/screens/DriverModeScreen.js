@@ -1,82 +1,35 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ActivityIndicator, Pressable } from 'react-native';
-import { Input, Button, SegmentedButtons, IconButton, cn, PageContainer } from '../components/ui';
+import { Input, SegmentedButtons, IconButton, PageContainer } from '../components/ui';
 import { useTranslation } from 'react-i18next';
-import { useFocusEffect } from '@react-navigation/native';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
-import { CODE_REGEX } from '../utils/validators';
 import { getDriverPermissions, todayISO, formatDateHuman } from '../utils/rutas';
 import { toastError } from '../utils/toast';
+import { useDriverJornada } from '../hooks/useDriverJornada';
+import JornadaBanner from '../components/JornadaBanner';
 import RutasPlanner from '../components/RutasPlanner';
-
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
-}
 
 export default function DriverModeScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const jornada = useDriverJornada();
 
-  const [entries, setEntries] = useState([]);
-  const [loadingEntries, setLoadingEntries] = useState(false);
-  const [codeInput, setCodeInput] = useState('');
-  const [joining, setJoining] = useState(false);
-  const [codeError, setCodeError] = useState('');
-  const [joinMessage, setJoinMessage] = useState('');
-  const [selectedOwnerId, setSelectedOwnerId] = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayISO());
-
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-
-  const loadEntries = useCallback(async () => {
-    setLoadingEntries(true);
-    try {
-      const resp = await api.get('/driver/my-codes');
-      const active = resp.data.filter((e) => e.owner_month_code?.month === currentMonth());
-      setEntries(active);
-      setSelectedOwnerId((prev) => prev ?? active[0]?.owner_month_code.owner_id ?? null);
-    } catch (err) {
-      setJoinMessage(errorMessage(err, t('driver.codesLoadError')));
-    } finally {
-      setLoadingEntries(false);
-    }
-  }, []);
-
-  useFocusEffect(useCallback(() => { loadEntries(); }, [loadEntries]));
-
-  const handleJoin = async () => {
-    setCodeError('');
-    const code = codeInput.trim().toUpperCase();
-    if (!CODE_REGEX.test(code)) {
-      setCodeError(t('driver.codeFormat'));
-      return;
-    }
-    setJoining(true);
-    try {
-      await api.post('/driver/join-code', { code, month: currentMonth() });
-      setCodeInput('');
-      setJoinMessage(t('driver.joined'));
-      loadEntries();
-    } catch (err) {
-      setJoinMessage(errorMessage(err, t('driver.invalidCode')));
-    } finally {
-      setJoining(false);
-    }
-  };
 
   // Busca por nombre de cliente entre TODAS las rutas de este conductor (sin
   // límite de fecha) y las acota al propietario elegido arriba, para poder
   // saltar directo a un viaje sin navegar día a día.
   const onSearchChange = async (text) => {
     setSearch(text);
-    if (!text.trim() || !selectedOwnerId) { setSearchResults([]); return; }
+    if (!text.trim() || !jornada.selectedOwnerId) { setSearchResults([]); return; }
     setSearching(true);
     try {
       const resp = await api.get('/rutas', { params: { search: text } });
-      setSearchResults(resp.data.data.filter((r) => r.owner_id === selectedOwnerId));
+      setSearchResults(resp.data.data.filter((r) => r.owner_id === jornada.selectedOwnerId));
     } catch (err) {
       toastError(errorMessage(err, t('driver.searchError')));
     } finally {
@@ -92,30 +45,20 @@ export default function DriverModeScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
-      <PageContainer className="p-4 pb-0">
-        <Text className="font-medium text-onSurface dark:text-onSurface-dark">{t('driver.joinTitle')}</Text>
-        <View className="flex-row gap-2.5 items-start mt-1">
-          <View className="flex-1">
-            <Input
-              label={t('driver.codeLabel')}
-              value={codeInput}
-              onChangeText={setCodeInput}
-              autoCapitalize="characters"
-              maxLength={8}
-            />
-          </View>
-          <Button mode="contained" onPress={handleJoin} loading={joining} disabled={joining}>{t('driver.join')}</Button>
-        </View>
-        {(!!codeError || !!joinMessage) && (
-          <Text className={cn('text-xs mb-1', codeError ? 'text-error dark:text-error-dark' : 'opacity-70 text-onSurface dark:text-onSurface-dark')}>
-            {codeError || joinMessage}
-          </Text>
-        )}
-      </PageContainer>
+      <JornadaBanner
+        showDriver
+        selectedDate={selectedDate}
+        codeInput={jornada.codeInput}
+        onCodeInputChange={jornada.setCodeInput}
+        onJoin={jornada.join}
+        joining={jornada.joining}
+        codeError={jornada.codeError}
+        joinMessage={jornada.joinMessage}
+      />
 
-      {loadingEntries ? (
+      {jornada.loading ? (
         <ActivityIndicator className="mt-6" />
-      ) : entries.length === 0 ? (
+      ) : !jornada.hasJoined ? (
         <View className="items-center mt-6 px-6">
           <IconButton icon="account-arrow-right-outline" size={40} disabled className="opacity-40" />
           <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">
@@ -124,11 +67,11 @@ export default function DriverModeScreen() {
         </View>
       ) : (
         <>
-          {entries.length > 1 && (
+          {jornada.entries.length > 1 && (
             <SegmentedButtons
-              value={selectedOwnerId ? String(selectedOwnerId) : ''}
-              onValueChange={(v) => setSelectedOwnerId(Number(v))}
-              buttons={entries.map((e) => ({
+              value={jornada.selectedOwnerId ? String(jornada.selectedOwnerId) : ''}
+              onValueChange={(v) => jornada.setSelectedOwnerId(Number(v))}
+              buttons={jornada.entries.map((e) => ({
                 value: String(e.owner_month_code.owner_id),
                 label: e.owner_month_code.owner?.first_name || `#${e.owner_month_code.owner_id}`,
               }))}
@@ -173,11 +116,11 @@ export default function DriverModeScreen() {
 
           <View className="flex-1">
             <RutasPlanner
-              key={selectedOwnerId}
+              key={jornada.selectedOwnerId}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
-              filterRuta={(ruta) => ruta.owner_id === selectedOwnerId && ruta.driver_id === user.id}
-              createExtra={{ owner_id: selectedOwnerId }}
+              filterRuta={(ruta) => ruta.owner_id === jornada.selectedOwnerId && ruta.driver_id === user.id}
+              createExtra={{ owner_id: jornada.selectedOwnerId }}
               canDelete={(ruta) => ruta.created_by === user.id && ruta.driver_id === user.id}
               editFieldSet={() => 'driverUpdate'}
               emptyMessage={t('driver.noRutasDay')}

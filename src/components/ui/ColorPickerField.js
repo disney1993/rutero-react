@@ -5,55 +5,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ColorPicker, { Panel1, HueSlider, Preview, Swatches } from 'reanimated-color-picker';
 import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
-import i18n from '../../i18n';
 import FieldLabel from './FieldLabel';
 import Button from './Button';
 import { cn } from './cn';
 import { isValidHexColor } from '../../utils/validators';
 import { haptics } from '../../utils/haptics';
+import { CAR_COLOR_PALETTE, KNOWN_CAR_COLORS, carColorToHex } from '../../utils/carColors';
 
-// `name` es el valor que se guarda (en español, por compatibilidad con los
-// datos existentes); `label` es su traducción para mostrarlo.
-function withLabel(c) {
-  const key = c.name.toLowerCase().replace(/[\u00e1\u00e9\u00ed\u00f3\u00fa]/g, (ch) => 'aeiou'['\u00e1\u00e9\u00ed\u00f3\u00fa'.indexOf(ch)]);
-  return Object.defineProperty(c, 'label', { get: () => i18n.t(`carColors.${key}`, { defaultValue: c.name }), enumerable: true });
-}
+export { CAR_COLOR_PALETTE, KNOWN_CAR_COLORS, carColorToHex };
 
-// Colores de carrocería más comunes, en orden de popularidad mundial
-// (informes anuales de color de BASF/Axalta: blanco, negro, gris y plata
-// suman ~80 %; después azul, rojo y, muy por detrás, verde, amarillo y
-// naranja). El nombre es lo que se guarda y se muestra en listados; el hex
-// solo se usa para pintar la muestra.
-export const CAR_COLOR_PALETTE = [
-  { name: 'Blanco', hex: '#FFFFFF' },
-  { name: 'Negro', hex: '#1C1C1C' },
-  { name: 'Gris', hex: '#9E9E9E' },
-  { name: 'Plata', hex: '#C7C7C7' },
-  { name: 'Azul', hex: '#1565C0' },
-  { name: 'Rojo', hex: '#D32F2F' },
-  { name: 'Verde', hex: '#2E7D32' },
-  { name: 'Amarillo', hex: '#FBC02D' },
-  { name: 'Naranja', hex: '#EF6C00' },
-].map(withLabel);
-
-// Colores que estuvieron en la paleta y ya no se muestran (para ahorrar una
-// fila), pero que pueden estar guardados: se siguen pintando con su tono real
-// y en el formulario aparecen en la muestra "Otro".
-const RETIRED_CAR_COLORS = [
-  { name: 'Marrón', hex: '#5D4037' },
-  { name: 'Beige', hex: '#D7CCC8' },
-].map(withLabel);
-
-// Todos los nombres reconocidos, para pintar el color de un vehículo guardado.
-export const KNOWN_CAR_COLORS = [...CAR_COLOR_PALETTE, ...RETIRED_CAR_COLORS];
+const RETIRED_CAR_COLORS = KNOWN_CAR_COLORS.filter(
+  (c) => !CAR_COLOR_PALETTE.some((p) => p.name === c.name),
+);
 
 const findByName = (list, value) => list.find((c) => c.name.toLowerCase() === (value || '').trim().toLowerCase());
-
-// Hex con el que pintar un color guardado (nombre de la paleta o #RRGGBB), o null.
-export function carColorToHex(value) {
-  if (isValidHexColor(value || '')) return value;
-  return findByName(KNOWN_CAR_COLORS, value)?.hex || null;
-}
+const findByHex = (list, value) => list.find((c) => c.hex.toUpperCase() === (value || '').trim().toUpperCase());
 
 // Atajos dentro del selector "Otro": tonos de coche habituales que no están
 // en la paleta principal (granate, azul marino, verde oscuro, champán...).
@@ -63,7 +29,7 @@ const DEFAULT_CUSTOM = '#1565C0';
 
 function Swatch({ hex, selected, onPress, label }) {
   return (
-    <Pressable onPress={onPress} accessibilityLabel={label} className="items-center mr-3 mb-2 w-14">
+    <Pressable onPress={onPress} accessibilityLabel={label || hex} className="items-center mr-3 mb-2 w-14">
       <View
         style={{ backgroundColor: hex }}
         className={cn(
@@ -73,9 +39,11 @@ function Swatch({ hex, selected, onPress, label }) {
       >
         {selected && <Icon name="check" size={18} color={isLight(hex) ? '#1C1B1F' : '#FFFFFF'} />}
       </View>
-      <Text numberOfLines={1} className="text-[10px] mt-1 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-        {label}
-      </Text>
+      {!!label && (
+        <Text numberOfLines={1} className="text-[10px] mt-1 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -91,7 +59,7 @@ function isLight(hex) {
 
 // Hoja inferior con un selector visual (tono + saturación/brillo), sin que el
 // usuario tenga que saber qué es un código RGB/hex: solo toca y arrastra.
-function CustomColorSheet({ visible, initial, onCancel, onConfirm }) {
+function CustomColorSheet({ visible, initial, onCancel, onConfirm, title, extraColors, swatchesLabel }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState(initial);
@@ -115,10 +83,10 @@ function CustomColorSheet({ visible, initial, onCancel, onConfirm }) {
             className="rounded-t-3xl px-5 bg-background dark:bg-background-dark"
           >
             <View className="items-center pt-2.5 pb-1">
-              <View className="w-10 h-1 rounded-full bg-border dark:bg-border-dark" />
+              <View className="w-10 h-1 rounded-full bg-border dark:border-border-dark" />
             </View>
             <Text className="text-center font-bold text-base py-2 text-onSurface dark:text-onSurface-dark">
-              {t('colorPicker.title')}
+              {title}
             </Text>
 
             <ColorPicker
@@ -129,10 +97,18 @@ function CustomColorSheet({ visible, initial, onCancel, onConfirm }) {
               <Preview hideInitialColor hideText style={{ height: 36, borderRadius: 12 }} />
               <Panel1 style={{ height: 180, borderRadius: 16 }} thumbSize={28} />
               <HueSlider style={{ borderRadius: 12 }} sliderThickness={26} thumbSize={30} />
-              <View>
-                <Text className="mb-2 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('colorPicker.moreColors')}</Text>
-                <Swatches colors={EXTRA_CAR_COLORS} swatchStyle={{ width: 32, height: 32, borderRadius: 16, marginHorizontal: 0 }} style={{ justifyContent: 'space-between' }} />
-              </View>
+              {!!extraColors?.length && (
+                <View>
+                  <Text className="mb-2 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                    {swatchesLabel || t('colorPicker.moreColors')}
+                  </Text>
+                  <Swatches
+                    colors={extraColors}
+                    swatchStyle={{ width: 32, height: 32, borderRadius: 16, marginHorizontal: 0 }}
+                    style={{ justifyContent: 'space-between' }}
+                  />
+                </View>
+              )}
             </ColorPicker>
 
             <View className="flex-row gap-3 mt-5">
@@ -146,45 +122,104 @@ function CustomColorSheet({ visible, initial, onCancel, onConfirm }) {
   );
 }
 
-export default function ColorPickerField({ label, required, value, onChange, error, className }) {
+/**
+ * Color picker with palette swatches + free hex via reanimated-color-picker.
+ * - Default (vehicles): inline palette + sheet with extra car tones.
+ * - storeAsHex (avatars): always stores #RRGGBB.
+ * - triggerOnly: no inline grid; a button/swatch opens the sheet (palette → sheet swatches).
+ */
+export default function ColorPickerField({
+  label,
+  required,
+  value,
+  onChange,
+  error,
+  className,
+  palette = CAR_COLOR_PALETTE,
+  storeAsHex = false,
+  sheetTitle,
+  extraColors = EXTRA_CAR_COLORS,
+  triggerOnly = false,
+  triggerLabel,
+  swatchesLabel,
+}) {
   const { t } = useTranslation();
-  const matched = useMemo(() => findByName(CAR_COLOR_PALETTE, value), [value]);
+  const matched = useMemo(
+    () => (storeAsHex ? findByHex(palette, value) : findByName(palette, value)),
+    [palette, storeAsHex, value]
+  );
   // Un color personalizado se guarda como hex (#RRGGBB); así lo sigue
   // pintando getVehicleSwatchColor en el resto de la app. Un color retirado
   // de la paleta (p. ej. "Plata") se muestra igual, en la muestra "Otro".
-  const customHex = matched ? null : (isValidHexColor(value || '') ? value : findByName(RETIRED_CAR_COLORS, value)?.hex || null);
+  const customHex = matched
+    ? null
+    : (isValidHexColor(value || '')
+      ? value
+      : (!storeAsHex ? findByName(RETIRED_CAR_COLORS, value)?.hex || null : null));
   const [sheetOpen, setSheetOpen] = useState(false);
+  const resolvedSheetTitle = sheetTitle || t('colorPicker.title');
+  const currentHex = customHex || matched?.hex || (isValidHexColor(value || '') ? value : DEFAULT_CUSTOM);
+  const sheetExtraColors = triggerOnly
+    ? palette.map((c) => c.hex)
+    : extraColors;
+  const openSheet = () => {
+    haptics.light();
+    setSheetOpen(true);
+  };
 
   return (
     <View className={className}>
       <FieldLabel required={required}>{label}</FieldLabel>
-      <View className="flex-row flex-wrap">
-        {CAR_COLOR_PALETTE.map((c) => (
-          <Swatch
-            key={c.name}
-            hex={c.hex}
-            label={c.label}
-            selected={matched?.name === c.name}
-            onPress={() => { haptics.selection(); onChange(c.name); }}
+      {triggerOnly ? (
+        <Pressable
+          onPress={openSheet}
+          accessibilityLabel={triggerLabel || t('profile.changeColor')}
+          className="flex-row items-center self-start rounded-full border border-border dark:border-border-dark px-3 py-2 active:opacity-80"
+        >
+          <View
+            style={{ backgroundColor: currentHex }}
+            className="w-8 h-8 rounded-full mr-3 border border-border dark:border-border-dark"
           />
-        ))}
-        {customHex ? (
-          // El color elegido sustituye al lápiz; tocarlo de nuevo permite cambiarlo.
-          <Swatch hex={customHex} label={t('colorPicker.other')} selected onPress={() => setSheetOpen(true)} />
-        ) : (
-          <Pressable onPress={() => { haptics.light(); setSheetOpen(true); }} accessibilityLabel={t('colorPicker.otherA11y')} className="items-center mr-3 mb-2 w-14">
-            <View className="w-9 h-9 rounded-full items-center justify-center border border-dashed border-border dark:border-border-dark">
-              <Icon name="palette-outline" size={18} />
-            </View>
-            <Text className="text-[10px] mt-1 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('colorPicker.other')}</Text>
-          </Pressable>
-        )}
-      </View>
+          <Text className="font-medium text-onSurface dark:text-onSurface-dark">
+            {triggerLabel || t('profile.changeColor')}
+          </Text>
+          <Icon name="chevron-right" size={20} className="ml-1" />
+        </Pressable>
+      ) : (
+        <View className="flex-row flex-wrap">
+          {palette.map((c) => (
+            <Swatch
+              key={c.hex + (c.name || '')}
+              hex={c.hex}
+              label={c.label}
+              selected={storeAsHex ? matched?.hex === c.hex : matched?.name === c.name}
+              onPress={() => {
+                haptics.selection();
+                onChange(storeAsHex ? c.hex : c.name);
+              }}
+            />
+          ))}
+          {customHex ? (
+            // El color elegido sustituye al lápiz; tocarlo de nuevo permite cambiarlo.
+            <Swatch hex={customHex} label={t('colorPicker.other')} selected onPress={() => setSheetOpen(true)} />
+          ) : (
+            <Pressable onPress={openSheet} accessibilityLabel={t('colorPicker.otherA11y')} className="items-center mr-3 mb-2 w-14">
+              <View className="w-9 h-9 rounded-full items-center justify-center border border-dashed border-border dark:border-border-dark">
+                <Icon name="palette-outline" size={18} />
+              </View>
+              <Text className="text-[10px] mt-1 text-center text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('colorPicker.other')}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
       {!!error && <Text className="text-error dark:text-error-dark text-xs mt-1">{error}</Text>}
 
       <CustomColorSheet
         visible={sheetOpen}
-        initial={customHex || DEFAULT_CUSTOM}
+        initial={currentHex}
+        title={resolvedSheetTitle}
+        extraColors={sheetExtraColors}
+        swatchesLabel={swatchesLabel || (triggerOnly ? t('colorPicker.suggested') : undefined)}
         onCancel={() => setSheetOpen(false)}
         onConfirm={(hex) => { setSheetOpen(false); haptics.success(); onChange(hex); }}
       />

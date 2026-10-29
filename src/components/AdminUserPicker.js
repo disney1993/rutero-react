@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Avatar, IconButton } from './ui';
 import { api, errorMessage } from '../utils/apiClient';
@@ -13,6 +13,8 @@ import { useSelectedUser } from '../context/SelectedUserContext';
 // (SelectedUserContext) en vez de guardar la selección localmente, para que
 // Dashboard Usuario, Rutas por día, Calendario y Vehículos compartan la
 // misma elección sin tener que volver a buscar en cada pantalla.
+// Resultados con View+map (no FlatList): este picker vive dentro de un
+// ScrollView y anidar VirtualizedList dispara el warning/error de RN.
 export default function AdminUserPicker({ onRefresh }) {
   const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
@@ -51,24 +53,21 @@ export default function AdminUserPicker({ onRefresh }) {
 
       {results.length > 0 && (
         <View className="mb-3 rounded-2xl overflow-hidden bg-surface dark:bg-surface-dark shadow-sm">
-          <FlatList
-            data={results}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => pick(item)}
-                className="flex-row items-center gap-3 p-3 border-b border-border dark:border-border-dark"
-              >
-                <Avatar.Text size={36} label={getInitials(item.first_name, item.last_name)} color={item.avatar_color || themeColors.surfaceDisabled} />
-                <View className="flex-1">
-                  <Text numberOfLines={1} className="text-onSurface dark:text-onSurface-dark">
-                    {`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email}
-                  </Text>
-                  <Text numberOfLines={1} className="text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{item.email}</Text>
-                </View>
-              </Pressable>
-            )}
-          />
+          {results.map((item) => (
+            <Pressable
+              key={String(item.id)}
+              onPress={() => pick(item)}
+              className="flex-row items-center gap-3 p-3 border-b border-border dark:border-border-dark"
+            >
+              <Avatar.Text size={36} label={getInitials(item.first_name, item.last_name)} color={item.avatar_color || themeColors.surfaceDisabled} />
+              <View className="flex-1">
+                <Text numberOfLines={1} className="text-onSurface dark:text-onSurface-dark">
+                  {`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email}
+                </Text>
+                <Text numberOfLines={1} className="text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{item.email}</Text>
+              </View>
+            </Pressable>
+          ))}
         </View>
       )}
 

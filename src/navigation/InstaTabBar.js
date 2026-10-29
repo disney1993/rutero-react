@@ -4,11 +4,12 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, w
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Avatar, Icon } from '../components/ui';
+import Avatar from '../components/ui/Avatar';
+import Icon from '../components/ui/Icon';
 import { useAuth } from '../context/AuthContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
-import { getInitials } from '../utils/avatar';
+import { getInitials, resolveAvatarColor } from '../utils/avatar';
 import { haptics } from '../utils/haptics';
 
 export const TAB_BAR_HEIGHT = 52;
@@ -22,7 +23,7 @@ function ProfileTabIcon({ focused, themeColors }) {
     <Avatar.Text
       size={focused ? 24 : 26}
       label={getInitials(user?.first_name, user?.last_name)}
-      color={user?.avatar_color || '#78909C'}
+      color={resolveAvatarColor(user?.avatar_color)}
     />
   );
   if (!focused) return avatar;

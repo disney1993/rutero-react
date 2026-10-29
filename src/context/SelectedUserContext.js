@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 
-const SelectedUserContext = createContext(null);
+// Same Fast Refresh / dual-module guard as AuthContext.
+const SelectedUserContext =
+  globalThis.__RUTERO_SELECTED_USER_CONTEXT__ ??
+  (globalThis.__RUTERO_SELECTED_USER_CONTEXT__ = createContext(null));
 
 // "Usuario que el admin está viendo" — un cursor de sesión, no una
 // preferencia duradera, por eso vive solo en memoria (sin AsyncStorage).

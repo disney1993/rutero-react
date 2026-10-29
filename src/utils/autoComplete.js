@@ -73,6 +73,24 @@ export function formatEta(eta, tripDate) {
   return `${time} (${day}/${month})`;
 }
 
+/** Minutes from now until ETA (negative if overdue). Null if unparseable. */
+export function minutesUntilEta(eta) {
+  if (!eta || typeof eta !== 'string') return null;
+  const [date, time] = eta.split('T');
+  if (!date || !time) return null;
+  const [y, mo, d] = date.split('-').map(Number);
+  const [h, mi] = time.split(':').map(Number);
+  if (![y, mo, d, h, mi].every((n) => Number.isFinite(n))) return null;
+  const etaMs = new Date(y, mo - 1, d, h, mi || 0).getTime();
+  return (etaMs - Date.now()) / 60000;
+}
+
+/** List hint: only when pending and ETA is within `withinMin` (default 15). */
+export function isEtaSoon(eta, withinMin = 15) {
+  const mins = minutesUntilEta(eta);
+  return mins != null && mins <= withinMin;
+}
+
 export function formatDuration(min) {
   if (min < 60) return i18n.t('duration.min', { min });
   const h = Math.floor(min / 60);

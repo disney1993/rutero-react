@@ -3,12 +3,11 @@ import { Pressable } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useTranslation } from 'react-i18next';
 import { Input, Dialog, Button } from './ui';
-import { todayISO, formatDateHuman } from '../utils/rutas';
+import { todayISO, formatDateDMY } from '../utils/rutas';
 import { useCalendarTheme } from '../utils/calendarTheme';
 
-// Selector de fecha basado en react-native-calendars (ya usada en el resto
-// de la app), en vez de escribir "YYYY-MM-DD" a mano.
-export default function DatePickerField({ label, value, onChange, error }) {
+// Date picker (react-native-calendars). Field shows dd/mm/yyyy; value stays ISO.
+export default function DatePickerField({ label, value, onChange, error, required, placeholder, className }) {
   const { t } = useTranslation();
   const calendarTheme = useCalendarTheme();
   const [visible, setVisible] = useState(false);
@@ -18,12 +17,15 @@ export default function DatePickerField({ label, value, onChange, error }) {
       <Pressable onPress={() => setVisible(true)}>
         <Input
           label={label}
-          value={value ? formatDateHuman(value) : ''}
+          required={required}
+          value={value ? formatDateDMY(value) : ''}
+          placeholder={placeholder || 'dd/mm/yyyy'}
           editable={false}
           pointerEvents="none"
           right="calendar"
           onRightPress={() => setVisible(true)}
           error={error}
+          className={className}
         />
       </Pressable>
 

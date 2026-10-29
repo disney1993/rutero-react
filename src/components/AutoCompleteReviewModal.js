@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Dialog, Button, getPaymentMethod } from './ui';
+import { Dialog, Button } from './ui';
+import { getPaymentMethod } from '../utils/paymentMethods';
+import PaymentMethodBadge from './ui/PaymentMethodBadge';
+import { useThemeMode } from '../context/ThemeModeContext';
+import { colors } from '../theme';
 import { getDriverPermissions } from '../utils/rutas';
 import { formatCurrency } from '../utils/currency';
 
@@ -27,6 +31,8 @@ export default function AutoCompleteReviewModal({
   onUndo,
 }) {
   const { t } = useTranslation();
+  const { resolvedScheme } = useThemeMode();
+  const themeColors = colors[resolvedScheme];
   const reviewable = rutas.filter((r) => getDriverPermissions(r, user).canChangeStatusPayment);
 
   return (
@@ -58,9 +64,16 @@ export default function AutoCompleteReviewModal({
               <Text numberOfLines={1} className="text-xs opacity-70 text-onSurface dark:text-onSurface-dark">
                 {r.origin} → {r.destination}
               </Text>
-              <Text className="text-xs mt-0.5 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-                {t('review.autoCompleted')} · {payment ? payment.label : t('payment.none')}
-              </Text>
+              <View className="flex-row items-center gap-1.5 mt-0.5">
+                <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                  {t('review.autoCompleted')}
+                  {payment ? ' · ' : ` · ${t('payment.none')}`}
+                </Text>
+                {!!payment && <PaymentMethodBadge method={payment} themeColors={themeColors} size="sm" />}
+                {!!payment && (
+                  <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{payment.label}</Text>
+                )}
+              </View>
               {canFix && (
                 <View className="flex-row flex-wrap gap-2 mt-2">
                   <Button compact mode="contained" loading={busyId === r.id} disabled={!!busyId} onPress={() => onConfirm(r)}>

@@ -4,7 +4,12 @@ import { api, setAuthToken } from '../utils/apiClient';
 
 const STORAGE_KEY = 'rutero.session';
 
-const AuthContext = createContext(null);
+// Singleton: Metro Fast Refresh + deferred require() (getComponent) can evaluate
+// this file twice. Two createContext() instances make useAuth() see null even
+// when a Provider is mounted (Provider uses context A, hook reads context B).
+const AuthContext =
+  globalThis.__RUTERO_AUTH_CONTEXT__ ??
+  (globalThis.__RUTERO_AUTH_CONTEXT__ = createContext(null));
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

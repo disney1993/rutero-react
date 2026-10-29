@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Switch } from 'react-native';
-import { Dialog, Input, Button, NativeSelect, ColorPickerField, VehicleTypeSelect, getVehicleType, carColorToHex } from './ui';
+import { Dialog, Input, Button, getVehicleType } from './ui';
+import NativeSelect from './ui/NativeSelect';
+import ColorPickerField from './ui/ColorPickerField';
+import { carColorToHex } from '../utils/carColors';
+import VehicleTypeSelect from './ui/VehicleTypeSelect';
 import { PLATE_REGEX, PLATE_MAX_LENGTH, sanitizePlate, isValidHexColor } from '../utils/validators';
 import { api } from '../utils/apiClient';
 import { useTranslation } from 'react-i18next';

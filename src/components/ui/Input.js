@@ -32,7 +32,7 @@ export default function Input({
         {!!left && <Icon name={left} size={20} className="mr-2" />}
         <TextInput
           placeholderTextColor={placeholderColor}
-          className={cn('flex-1 py-2.5 text-onSurface dark:text-onSurface-dark', inputClassName)}
+          className={cn('flex-1 py-2 text-onSurface dark:text-onSurface-dark', inputClassName)}
           {...rest}
         />
         {!!right && (

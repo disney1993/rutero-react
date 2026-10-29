@@ -10,12 +10,21 @@ import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
 import { haptics } from '../../utils/haptics';
 
-// Misma altura y tamaño de letra que <Input> (py-2.5 + texto de 14).
-const FIELD_HEIGHT = 42;
+// Same trigger height/padding as <Input> (border + px-3 + py-2).
+const FIELD_HEIGHT = 40;
 const FONT_SIZE = 14;
 
 const EMPTY = '__empty__';
 const OTHER = '__other__';
+
+// Acepta strings o { value, label } (p. ej. vehículos por id + matrícula).
+function normalizeOptions(options) {
+  return (options || []).map((o) => (
+    o != null && typeof o === 'object' && 'value' in o
+      ? { value: String(o.value), label: String(o.label ?? o.value) }
+      : { value: String(o), label: String(o) }
+  ));
+}
 
 // Desplegable con el selector nativo de cada plataforma:
 //  - Android: el desplegable del sistema (Spinner) dentro del marco del campo.
@@ -45,23 +54,27 @@ export default function NativeSelect({
   const c = colors[resolvedScheme];
   const insets = useSafeAreaInsets();
 
+  const normalized = React.useMemo(() => normalizeOptions(options), [options]);
   const sorted = React.useMemo(
-    () => (sort ? [...options].sort((a, b) => String(a).localeCompare(String(b), 'es', { sensitivity: 'base' })) : options),
-    [options, sort]
+    () => (sort
+      ? [...normalized].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }))
+      : normalized),
+    [normalized, sort]
   );
-  const inList = !!value && options.includes(value);
+  const valueStr = value == null || value === '' ? '' : String(value);
+  const inList = !!valueStr && sorted.some((o) => o.value === valueStr);
   // Valor fuera de la lista (escrito a mano o de un catálogo antiguo).
-  const [customMode, setCustomMode] = useState(!!value && !inList);
+  const [customMode, setCustomMode] = useState(!!valueStr && !inList);
   const [iosOpen, setIosOpen] = useState(false);
   const [iosDraft, setIosDraft] = useState(EMPTY);
 
   // Si cambian las opciones (otra marca → otros modelos) se recalcula el modo.
   useEffect(() => {
-    setCustomMode(!!value && !options.includes(value));
+    setCustomMode(!!valueStr && !sorted.some((o) => o.value === valueStr));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options]);
 
-  const pickerValue = customMode ? OTHER : inList ? value : EMPTY;
+  const pickerValue = customMode ? OTHER : inList ? valueStr : EMPTY;
 
   const handlePick = (next) => {
     if (next === pickerValue) return;
@@ -79,7 +92,7 @@ export default function NativeSelect({
   const items = [
     <Picker.Item key={EMPTY} label={placeholder} value={EMPTY} color={c.onSurfaceVariant} style={itemStyle} enabled={Platform.OS !== 'android' || pickerValue === EMPTY} />,
     ...sorted.map((o) => (
-      <Picker.Item key={o} label={String(o)} value={o} color={c.onSurface} style={itemStyle} />
+      <Picker.Item key={o.value} label={o.label} value={o.value} color={c.onSurface} style={itemStyle} />
     )),
     ...(customLabel ? [<Picker.Item key={OTHER} label={customLabel} value={OTHER} color={c.primary} style={itemStyle} />] : []),
   ];
@@ -90,7 +103,8 @@ export default function NativeSelect({
     disabled && 'opacity-50'
   );
 
-  const currentLabel = customMode ? customLabel : inList ? value : null;
+  const matched = sorted.find((o) => o.value === valueStr);
+  const currentLabel = customMode ? customLabel : matched ? matched.label : null;
 
   return (
     <View className={cn('mb-1', className)}>
@@ -102,17 +116,15 @@ export default function NativeSelect({
           onPress={() => { haptics.light(); setIosDraft(pickerValue); setIosOpen(true); }}
           accessibilityRole="button"
           accessibilityLabel={`${label}: ${currentLabel || placeholder}`}
-          style={{ height: FIELD_HEIGHT }}
           className={cn(frameClass, 'px-3 active:opacity-70')}
         >
-          <Text numberOfLines={1} className={cn('flex-1', currentLabel ? 'text-onSurface dark:text-onSurface-dark' : 'text-onSurfaceVariant dark:text-onSurfaceVariant-dark')}>
+          <Text numberOfLines={1} className={cn('flex-1 py-2', currentLabel ? 'text-onSurface dark:text-onSurface-dark' : 'text-onSurfaceVariant dark:text-onSurfaceVariant-dark')}>
             {currentLabel || placeholder}
           </Text>
           <Icon name="chevron-down" size={20} color={c.onSurfaceVariant} />
         </Pressable>
       ) : (
-        // El Spinner de Android mide ~56dp por defecto: se recorta al alto de los
-        // demás campos centrándolo dentro de un marco de altura fija.
+        // Android Spinner defaults to ~56dp; clip/center inside Input-height frame.
         <View style={{ height: FIELD_HEIGHT, justifyContent: 'center' }} className={cn(frameClass, 'overflow-hidden')}>
           <Picker
             selectedValue={pickerValue}
@@ -145,7 +157,7 @@ export default function NativeSelect({
           placeholder={customPlaceholder}
           placeholderTextColor={c.onSurfaceVariant}
           className={cn(
-            'mt-1.5 border rounded-2xl px-3 py-2.5 text-onSurface dark:text-onSurface-dark',
+            'mt-1.5 border rounded-2xl px-3 py-2 text-onSurface dark:text-onSurface-dark',
             error ? 'border-error dark:border-error-dark' : 'border-border dark:border-border-dark'
           )}
         />

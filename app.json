@@ -20,7 +20,9 @@
       "expo-image",
       "expo-status-bar",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "rutero",
     "userInterfaceStyle": "automatic",

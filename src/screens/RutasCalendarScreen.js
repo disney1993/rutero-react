@@ -12,10 +12,18 @@ import { colors } from '../theme';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { useSelectedUser } from '../context/SelectedUserContext';
+import {
+  canManageVehicles,
+  canShowCreateFab,
+  isDriverWorkMode,
+  isOwnerCapable,
+} from '../utils/capabilities';
+import { useDriverJornada } from '../hooks/useDriverJornada';
 import { STATUS_COLORS } from '../utils/rutas';
 import { toastError, toastSuccess } from '../utils/toast';
 import { haptics } from '../utils/haptics';
 import RutaFormModal from '../components/RutaFormModal';
+import JornadaBanner from '../components/JornadaBanner';
 import SelectedUserBanner from '../components/SelectedUserBanner';
 
 const DEFAULT_DURATION_MIN = 60;
@@ -60,6 +68,13 @@ export default function RutasCalendarScreen({ navigation }) {
   const { resolvedScheme } = useThemeMode();
   const c = colors[resolvedScheme];
 
+  const ownerCapable = isOwnerCapable(user, isAdmin);
+  const driverMode = isDriverWorkMode(user, isAdmin);
+  const showVehiclesNav = canManageVehicles(user, isAdmin);
+  const jornada = useDriverJornada({ enabled: !isAdmin });
+  const needsJoin = driverMode && jornada.loaded && !jornada.hasJoined;
+  const showFab = canShowCreateFab({ user, isAdmin, hasJoinedJornada: jornada.hasJoined });
+
   const [mode, setMode] = useState('day');
   const [date, setDate] = useState(() => new Date());
   const [rutas, setRutas] = useState([]);
@@ -77,35 +92,47 @@ export default function RutasCalendarScreen({ navigation }) {
   const rangeKey = `${from.format('YYYY-MM-DD')}_${to.format('YYYY-MM-DD')}`;
 
   const loadRutas = useCallback(async () => {
-    if (!targetUser) return;
+    if (!targetUser || needsJoin) {
+      setRutas([]);
+      return;
+    }
     setLoading(true);
     try {
       const resp = await api.get('/rutas', {
         params: { date_from: from.format('YYYY-MM-DD'), date_to: to.format('YYYY-MM-DD'), ...userParams },
       });
-      setRutas((resp.data.data || []).filter((r) => r.owner_id === targetUser.id && r.trip_date));
+      const rows = resp.data.data || [];
+      const filtered = driverMode
+        ? rows.filter((r) => r.owner_id === jornada.selectedOwnerId && r.driver_id === user.id && r.trip_date)
+        : rows.filter((r) => r.owner_id === targetUser.id && r.trip_date);
+      setRutas(filtered);
     } catch (err) {
       toastError(errorMessage(err, t('planner.loadError')));
     } finally {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeKey, targetUser?.id, isAdmin]);
+  }, [rangeKey, targetUser?.id, isAdmin, driverMode, needsJoin, jornada.selectedOwnerId, user?.id]);
 
   useFocusEffect(useCallback(() => { loadRutas(); }, [loadRutas]));
 
   useFocusEffect(useCallback(() => {
-    if (!targetUser) { setVehiclesLoaded(true); return; }
+    if (!targetUser || driverMode) {
+      setVehicles([]);
+      setVehiclesLoaded(true);
+      return;
+    }
     api.get('/vehicles', { params: isAdmin ? { owner_id: targetUser.id } : {} })
       .then((resp) => setVehicles(resp.data))
       .catch(() => {})
       .finally(() => setVehiclesLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, targetUser?.id]));
+  }, [isAdmin, targetUser?.id, driverMode]));
 
-  const events = useMemo(() => rutas.map(toEvent), [rutas]);
+  const events = useMemo(() => (needsJoin ? [] : rutas.map(toEvent)), [rutas, needsJoin]);
   const locale = i18n.language === 'en' ? 'en-gb' : 'es';
-  const createBlocked = !isAdmin && vehiclesLoaded && vehicles.length === 0;
+  const createBlocked = needsJoin
+    || (!isAdmin && !driverMode && vehiclesLoaded && vehicles.length === 0);
 
   const title = useMemo(() => {
     const d = dayjs(date).locale(locale);
@@ -123,7 +150,11 @@ export default function RutasCalendarScreen({ navigation }) {
   };
 
   const openCreate = (when) => {
-    if (createBlocked) { navigation.navigate('MyVehicles'); return; }
+    if (needsJoin) return;
+    if (createBlocked) {
+      if (showVehiclesNav) navigation.navigate('MyVehicles');
+      return;
+    }
     const d = dayjs(when || date);
     // Al tocar una franja horaria se propone esa hora (redondeada a 15 min).
     const time = when ? `${pad(d.hour())}:${pad(Math.floor(d.minute() / 15) * 15)}` : null;
@@ -141,11 +172,14 @@ export default function RutasCalendarScreen({ navigation }) {
   const handleSubmit = async (payload) => {
     setSubmitting(true);
     try {
+      const extra = driverMode
+        ? { owner_id: jornada.selectedOwnerId }
+        : (isAdmin ? { owner_id: targetUser.id } : {});
       if (editingRuta) {
         await api.put(`/rutas/${editingRuta.id}`, payload);
         toastSuccess(t('planner.updated'));
       } else {
-        await api.post('/rutas', { ...payload, ...(isAdmin ? { owner_id: targetUser.id } : {}) });
+        await api.post('/rutas', { ...payload, ...extra });
         toastSuccess(t('planner.created'));
       }
       setFormVisible(false);
@@ -178,75 +212,121 @@ export default function RutasCalendarScreen({ navigation }) {
     <View className="flex-1 bg-background dark:bg-background-dark">
       {isAdmin && <SelectedUserBanner />}
 
-      <View className="px-3 pt-1 pb-2">
-        <SegmentedButtons
-          value={mode}
-          onValueChange={setMode}
-          buttons={[
-            { value: 'day', label: t('calendar.day') },
-            { value: 'week', label: t('calendar.week') },
-            { value: 'month', label: t('calendar.month') },
-          ]}
+      {!isAdmin && (
+        <JornadaBanner
+          showOwner={!driverMode && (ownerCapable || (vehiclesLoaded && vehicles.length > 0))}
+          showDriver={driverMode}
+          selectedDate={toISODate(date)}
+          codeInput={jornada.codeInput}
+          onCodeInputChange={jornada.setCodeInput}
+          onJoin={jornada.join}
+          joining={jornada.joining}
+          codeError={jornada.codeError}
+          joinMessage={jornada.joinMessage}
         />
-        <View className="flex-row items-center mt-2">
-          <IconButton icon="chevron-left" onPress={() => shift(-1)} accessibilityLabel={t('calendar.previous')} />
-          <Text numberOfLines={1} className="flex-1 text-center font-semibold capitalize text-onSurface dark:text-onSurface-dark">
-            {title}
+      )}
+
+      {driverMode && jornada.entries.length > 1 && (
+        <SegmentedButtons
+          value={jornada.selectedOwnerId ? String(jornada.selectedOwnerId) : ''}
+          onValueChange={(v) => jornada.setSelectedOwnerId(Number(v))}
+          buttons={jornada.entries.map((e) => ({
+            value: String(e.owner_month_code.owner_id),
+            label: e.owner_month_code.owner?.first_name || `#${e.owner_month_code.owner_id}`,
+          }))}
+          className="mx-3 mt-1"
+        />
+      )}
+
+      {driverMode && (!jornada.loaded || jornada.loading) ? (
+        <ActivityIndicator className="mt-10" />
+      ) : needsJoin ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <IconButton icon="account-arrow-right-outline" size={40} disabled className="opacity-40" />
+          <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">
+            {t('driver.noOwners')}
           </Text>
-          {loading && <ActivityIndicator size="small" color={c.primary} className="mr-1" />}
-          <Pressable
-            onPress={() => { haptics.selection(); setDate(new Date()); }}
-            className="px-3 py-1 rounded-full border border-primary dark:border-primary-dark active:opacity-70"
-          >
-            <Text className="text-xs font-semibold text-primary dark:text-primary-dark">{t('common.today')}</Text>
-          </Pressable>
-          <IconButton icon="chevron-right" onPress={() => shift(1)} accessibilityLabel={t('calendar.next')} />
         </View>
-      </View>
+      ) : (
+        <>
+          <View className="px-3 pt-1 pb-2">
+            <SegmentedButtons
+              value={mode}
+              onValueChange={setMode}
+              buttons={[
+                { value: 'day', label: t('calendar.day') },
+                { value: 'week', label: t('calendar.week') },
+                { value: 'month', label: t('calendar.month') },
+              ]}
+            />
+            <View className="flex-row items-center mt-2">
+              <IconButton icon="chevron-left" onPress={() => shift(-1)} accessibilityLabel={t('calendar.previous')} />
+              {/* Day view already shows Wed / 14 in the calendar header; skip the long date label. */}
+              {mode === 'day' ? (
+                <View className="flex-1" />
+              ) : (
+                <Text numberOfLines={1} className="flex-1 text-center font-semibold capitalize text-onSurface dark:text-onSurface-dark">
+                  {title}
+                </Text>
+              )}
+              {loading && <ActivityIndicator size="small" color={c.primary} className="mr-1" />}
+              <Pressable
+                onPress={() => { haptics.selection(); setDate(new Date()); }}
+                className="px-3 py-1 rounded-full border border-primary dark:border-primary-dark active:opacity-70"
+              >
+                <Text className="text-xs font-semibold text-primary dark:text-primary-dark">{t('common.today')}</Text>
+              </Pressable>
+              <IconButton icon="chevron-right" onPress={() => shift(1)} accessibilityLabel={t('calendar.next')} />
+            </View>
+          </View>
 
-      <View className="flex-1" onLayout={(e) => setCalendarHeight(e.nativeEvent.layout.height)}>
-        {calendarHeight > 0 && (
-          <BigCalendar
-            key={`${resolvedScheme}-${locale}`}
-            events={events}
-            height={calendarHeight}
-            mode={mode}
-            date={date}
-            locale={locale}
-            weekStartsOn={1}
-            theme={calendarTheme}
-            swipeEnabled
-            onSwipeEnd={(d) => setDate(d)}
-            scrollOffsetMinutes={7 * 60}
-            showAdjacentMonths
-            moreLabel={t('calendar.more')}
-            hourRowHeight={56}
-            // Sin fondo propio: lo pone el contenedor. En la vista de mes, en
-            // Android, la librería aplica este estilo a cada fila de semana y
-            // (con el zIndex negativo de las celdas) tapaba todos los días
-            // salvo el lunes.
-            headerContainerStyle={{ backgroundColor: c.background }}
-            bodyContainerStyle={mode === 'month' ? undefined : { backgroundColor: c.background }}
-            eventCellStyle={(event) => ({
-              backgroundColor: STATUS_COLORS[event.ruta.status] || c.primary,
-              borderRadius: 8,
-            })}
-            allDayEventCellStyle={(event) => ({ backgroundColor: STATUS_COLORS[event.ruta.status] || c.primary, borderRadius: 8 })}
-            onPressEvent={openEdit}
-            onPressCell={(d) => {
-              if (mode === 'month') { haptics.selection(); setDate(d); setMode('day'); }
-              else openCreate(d);
-            }}
-            onPressDateHeader={(d) => { haptics.selection(); setDate(d); setMode('day'); }}
-          />
-        )}
-      </View>
+          <View className="flex-1" onLayout={(e) => setCalendarHeight(e.nativeEvent.layout.height)}>
+            {calendarHeight > 0 && (
+              <BigCalendar
+                key={`${resolvedScheme}-${locale}`}
+                events={events}
+                height={calendarHeight}
+                mode={mode}
+                date={date}
+                locale={locale}
+                weekStartsOn={1}
+                theme={calendarTheme}
+                swipeEnabled
+                onSwipeEnd={(d) => setDate(d)}
+                scrollOffsetMinutes={7 * 60}
+                showAdjacentMonths
+                moreLabel={t('calendar.more')}
+                hourRowHeight={56}
+                // Sin fondo propio: lo pone el contenedor. En la vista de mes, en
+                // Android, la librería aplica este estilo a cada fila de semana y
+                // (con el zIndex negativo de las celdas) tapaba todos los días
+                // salvo el lunes.
+                headerContainerStyle={{ backgroundColor: c.background }}
+                bodyContainerStyle={mode === 'month' ? undefined : { backgroundColor: c.background }}
+                eventCellStyle={(event) => ({
+                  backgroundColor: STATUS_COLORS[event.ruta.status] || c.primary,
+                  borderRadius: 8,
+                })}
+                allDayEventCellStyle={(event) => ({ backgroundColor: STATUS_COLORS[event.ruta.status] || c.primary, borderRadius: 8 })}
+                onPressEvent={openEdit}
+                onPressCell={(d) => {
+                  if (mode === 'month') { haptics.selection(); setDate(d); setMode('day'); }
+                  else openCreate(d);
+                }}
+                onPressDateHeader={(d) => { haptics.selection(); setDate(d); setMode('day'); }}
+              />
+            )}
+          </View>
 
-      <FAB
-        icon={createBlocked ? 'lock-outline' : 'plus'}
-        label={createBlocked ? undefined : t('rutaForm.newTitle')}
-        onPress={() => openCreate(null)}
-      />
+          {showFab && (
+            <FAB
+              icon={createBlocked ? 'lock-outline' : 'plus'}
+              label={createBlocked ? undefined : t('rutaForm.newTitle')}
+              onPress={() => openCreate(null)}
+            />
+          )}
+        </>
+      )}
 
       <RutaFormModal
         visible={formVisible}
@@ -255,6 +335,7 @@ export default function RutasCalendarScreen({ navigation }) {
         initialValues={editingRuta}
         defaultDate={newDefaults.date}
         defaultTime={newDefaults.time}
+        fieldSet={driverMode && editingRuta ? 'driverUpdate' : 'full'}
         vehicles={vehicles}
         submitting={submitting}
       />

@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, useWindowDimensions, RefreshControl, Pressable, ActivityIndicator, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Icon, IconButton, FAB, Menu, Dialog, Button, StatusBadge, SwipeToDelete, VehicleTypeIcon, carColorToHex, getPaymentMethod, getPaymentMethodColor, PAYMENT_METHODS } from './ui';
+import { Icon, IconButton, FAB, Menu, Dialog, Button, StatusBadge, SwipeToDelete, VehicleTypeIcon, Avatar } from './ui';
+import { carColorToHex } from '../utils/carColors';
+import { PAYMENT_METHODS, getPaymentMethod, getPaymentMethodColor } from '../utils/paymentMethods';
+import PaymentMethodBadge from './ui/PaymentMethodBadge';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
@@ -9,6 +12,7 @@ import { api, errorMessage } from '../utils/apiClient';
 import { STATUS_COLORS, STATUS_OPTIONS, shiftDate, formatDateHuman, todayISO, getDriverPermissions } from '../utils/rutas';
 import { rutaHour } from '../utils/schedule';
 import { formatCurrency } from '../utils/currency';
+import { getInitials, resolveAvatarColor } from '../utils/avatar';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useThemeMode } from '../context/ThemeModeContext';
@@ -20,7 +24,7 @@ import RutaFormModal from './RutaFormModal';
 import MonthCalendarPicker from './MonthCalendarPicker';
 import AutoCompleteNotice from './AutoCompleteNotice';
 import AutoCompleteReviewModal from './AutoCompleteReviewModal';
-import { autoCompleteEnabled, formatEta } from '../utils/autoComplete';
+import { autoCompleteEnabled, formatEta, isEtaSoon } from '../utils/autoComplete';
 
 // Cada cuánto se refresca la jornada abierta para reflejar los cierres
 // automáticos que hace el cron del servidor.
@@ -60,6 +64,22 @@ function QuickAction({ icon, label, color, onPress, showLabel }) {
   );
 }
 
+function userInCompletions(item, userId) {
+  if (!userId) return false;
+  if ((item.completions || []).some((c) => c.user_id === userId || c.user?.id === userId)) return true;
+  return item.completed_by === userId;
+}
+
+/** Compact list avatar: canceller when soft-deleted, else first completer. */
+function rowAvatarPerson(item) {
+  if (item.deleted_at && item.canceller) return item.canceller;
+  if (item.status === 'completed') {
+    const fromPivot = (item.completions || []).map((c) => c.user).find(Boolean);
+    return fromPivot || item.completer || null;
+  }
+  return null;
+}
+
 function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, user, canDelete, onEdit, onDelete, onQuickUpdate, onSwiped, peek, onPeekDone, isWide, onRestore }) {
   const { t } = useTranslation();
   // Viaje eliminado (borrado blando): se ve atenuado y tachado; tocarlo ofrece restaurarlo.
@@ -72,14 +92,28 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
   const dayTag = item.trip_date === prevDate ? t('planner.yesterday') : item.trip_date === nextDate ? t('planner.tomorrow') : null;
   const price = item.final_price ?? item.estimated_price;
   const paymentMethod = item.payment_method ? getPaymentMethod(item.payment_method) : null;
-  const completerName = item.completer
-    ? `${item.completer.first_name || ''} ${item.completer.last_name || ''}`.trim()
-    : null;
+  const avatarPerson = rowAvatarPerson(item);
+  const showWillComplete = item.status === 'pending' && !!item.auto_complete_eta && isEtaSoon(item.auto_complete_eta, 15);
+  const alreadyMarked = userInCompletions(item, user?.id);
   const canChangeStatusPayment = !isDeleted && getDriverPermissions(item, user).canChangeStatusPayment;
 
-  // Gestos: → completar (o devolver a pendiente si ya lo está);
-  // ← cancelar (= borrado blando). Tocar un cancelado lo restaura.
-  const nextStatus = item.status === 'completed' ? 'pending' : 'completed';
+  // Gestos: → completar (si ya está completado y este usuario aún no se ha
+  // registrado, vuelve a enviar "completed" para sumar su marca; si ya está
+  // en la lista, vuelve a pendiente). ← cancelar (= borrado blando).
+  const rightSwipeAction = (() => {
+    if (item.status !== 'completed') {
+      return { status: 'completed', label: t('status.completed'), icon: 'check-circle-outline', color: STATUS_COLORS.completed };
+    }
+    if (!alreadyMarked) {
+      return { status: 'completed', label: t('planner.markCompleted'), icon: 'check-circle-outline', color: STATUS_COLORS.completed };
+    }
+    return { status: 'pending', label: t('status.pending'), icon: 'clock-outline', color: STATUS_COLORS.pending };
+  })();
+  // Soft status tint on the details zone (same alpha as WhatsApp/call columns).
+  const rowTintHex = isDeleted
+    ? STATUS_COLORS.cancelled
+    : (STATUS_COLORS[item.status] || STATUS_COLORS.pending);
+  const rowTintBg = `${rowTintHex}1A`;
   return (
     <SwipeToDelete
       rounded={false}
@@ -93,27 +127,39 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
       peek={peek}
       onPeekDone={onPeekDone}
       rightSwipe={{
-        label: t(`status.${nextStatus}`),
-        icon: nextStatus === 'completed' ? 'check-circle-outline' : 'clock-outline',
-        color: STATUS_COLORS[nextStatus],
-        onTrigger: () => onQuickUpdate(item, { status: nextStatus }),
+        label: rightSwipeAction.label,
+        icon: rightSwipeAction.icon,
+        color: rightSwipeAction.color,
+        onTrigger: () => {
+          // Align with auto-complete: completing via swipe defaults to cash.
+          const patch = { status: rightSwipeAction.status };
+          if (rightSwipeAction.status === 'completed') {
+            patch.payment_method = 'efectivo';
+          }
+          onQuickUpdate(item, patch);
+        },
         blockedReason: canChangeStatusPayment ? null : t('planner.cannotChangeStatus'),
       }}
     >
     <View className="flex-row items-stretch bg-background dark:bg-background-dark border-b border-border dark:border-border-dark">
+    {/* Full details column tint (same 1A alpha as WhatsApp/call). Own View so
+        Pressable / icon surface classes cannot hide or clip the wash. */}
+    <View style={{ backgroundColor: rowTintBg }} className="flex-1">
     <Pressable
       onPress={() => { haptics.light(); if (isDeleted) onRestore(item); else onEdit(item); }}
       android_ripple={{ color: themeColors.border }}
-      style={({ pressed }) => [pressed && { backgroundColor: themeColors.surfaceDisabled }]}
+      style={({ pressed }) => [
+        pressed && { backgroundColor: themeColors.surfaceDisabled },
+      ]}
       className={`flex-1 flex-row items-center gap-3 py-2.5 pr-2 ${isDeleted ? 'opacity-50' : ''}`}
     >
-      <View className="w-12 h-9 rounded-lg items-center justify-center bg-surface dark:bg-surface-dark">
+      <View className="w-12 h-9 rounded-lg items-center justify-center">
         {vehicle ? (
           <VehicleTypeIcon
             type={vehicle.vehicle_type}
             size={40}
             color={paint || themeColors.primary}
-            cutoutColor={themeColors.surface}
+            cutoutColor={themeColors.background}
             outlineColor={paint ? themeColors.onSurface : undefined}
           />
         ) : (
@@ -152,9 +198,7 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
               anchor={
                 <Pressable disabled={!canChangeStatusPayment} onPress={() => setPaymentMenuVisible(true)} hitSlop={8}>
                   {paymentMethod ? (
-                    <View style={{ backgroundColor: getPaymentMethodColor(paymentMethod, themeColors) }} className="rounded px-1 py-0.5">
-                      <Text className="text-white text-[9px] font-bold">{paymentMethod.code}</Text>
-                    </View>
+                    <PaymentMethodBadge method={paymentMethod} themeColors={themeColors} size="sm" />
                   ) : canChangeStatusPayment ? (
                     <View className="rounded px-1 py-0.5 border border-dashed border-border dark:border-border-dark">
                       <Text className="text-onSurfaceVariant dark:text-onSurfaceVariant-dark text-[9px]">{t('planner.payment')}</Text>
@@ -177,22 +221,26 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
               )}
             </Menu>
           </View>
-          {price != null && (
-            <Text className="font-bold text-onSurface dark:text-onSurface-dark">
-              {formatCurrency(price, currency)}{!item.final_price && '*'}
-            </Text>
-          )}
+          <View className="flex-row items-center gap-1.5">
+            {!!avatarPerson && (
+              <Avatar.Text
+                size={18}
+                label={getInitials(avatarPerson.first_name, avatarPerson.last_name)}
+                color={resolveAvatarColor(avatarPerson.avatar_color)}
+              />
+            )}
+            {price != null && (
+              <Text className="font-bold text-onSurface dark:text-onSurface-dark">
+                {formatCurrency(price, currency)}{!item.final_price && '*'}
+              </Text>
+            )}
+          </View>
         </View>
         <Text numberOfLines={1} style={isDeleted ? { textDecorationLine: 'line-through' } : undefined} className="text-onSurface dark:text-onSurface-dark">{item.client_name}</Text>
         <Text numberOfLines={1} className="mt-0.5 opacity-70 text-xs text-onSurface dark:text-onSurface-dark">
           {item.origin} → {item.destination}
         </Text>
-        {item.status === 'completed' && completerName && (
-          <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] italic text-onSurface dark:text-onSurface-dark">
-            {t('planner.completedBy', { name: completerName })}
-          </Text>
-        )}
-        {item.status === 'pending' && !!item.auto_complete_eta && (
+        {showWillComplete && (
           <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] text-onSurface dark:text-onSurface-dark">
             {t('planner.willComplete', { time: formatEta(item.auto_complete_eta, item.trip_date) })}
           </Text>
@@ -209,6 +257,7 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
         )}
       </View>
     </Pressable>
+    </View>
     {!!item.client_phone && (
       <>
         <QuickAction icon="whatsapp" label="WhatsApp" color="#25D366" showLabel={isWide} onPress={() => whatsAppClient(item.client_phone)} />
@@ -235,6 +284,7 @@ export default function RutasPlanner({
   createBlocked = false,
   createBlockedMessage = '',
   onCreateBlockedPress,
+  showCreateFab = true,
   // Por defecto la fecha seleccionada es interna (con su propia barra de
   // prev/next/día). Si el pantalla que la usa ya tiene su propio selector
   // (p.ej. un calendario de mes), puede controlarla desde afuera pasando
@@ -367,7 +417,7 @@ export default function RutasPlanner({
   const closeIntro = (goToSettings = false) => {
     setIntroVisible(false);
     AsyncStorage.setItem(INTRO_KEY, '1').catch(() => {});
-    if (goToSettings) navigation.navigate('Account', { screen: 'Settings', initial: false });
+    if (goToSettings) navigation.navigate('Account', { screen: 'SettingsTrips', initial: false });
   };
 
   const markReviewed = async (ruta) => {
@@ -640,15 +690,25 @@ export default function RutasPlanner({
               <Text className="text-center opacity-60 px-6 text-onSurface dark:text-onSurface-dark">{emptyMessage ?? t('planner.emptyDay')}</Text>
             </View>
           }
+          ListFooterComponent={!isEmpty ? (
+            <View className="flex-row items-center justify-center gap-1.5 mt-3 px-4">
+              <Icon name="gesture-swipe" size={18} color={themeColors.onSurfaceVariant} />
+              <Text className="flex-1 text-center text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                {t('planner.swipeHint')}
+              </Text>
+            </View>
+          ) : null}
           renderItem={({ item }) => renderRow(item)}
         />
       )}
 
-      <FAB
-        icon={createBlocked ? 'lock-outline' : 'plus'}
-        label={createBlocked ? undefined : t('rutaForm.newTitle')}
-        onPress={openCreate}
-      />
+      {showCreateFab && (
+        <FAB
+          icon={createBlocked ? 'lock-outline' : 'plus'}
+          label={createBlocked ? undefined : t('rutaForm.newTitle')}
+          onPress={openCreate}
+        />
+      )}
 
       <RutaFormModal
         visible={formVisible}

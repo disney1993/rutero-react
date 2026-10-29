@@ -24,6 +24,7 @@ export default function Button({
   loading = false,
   disabled = false,
   icon,
+  iconColor,
   compact = false,
   style,
   contentStyle,
@@ -32,7 +33,7 @@ export default function Button({
   children,
 }) {
   const { resolvedScheme } = useThemeMode();
-  const accentColor = mode === 'contained' ? '#fff' : colors[resolvedScheme].primary;
+  const accentColor = iconColor || (mode === 'contained' ? '#fff' : colors[resolvedScheme].primary);
   const isDisabled = disabled || loading;
   return (
     <Pressable
