@@ -16,7 +16,7 @@ import { api, errorMessage } from '../utils/apiClient';
 import { toastError, toastSuccess } from '../utils/toast';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
-import { todayISO, STATUS_COLORS } from '../utils/rutas';
+import { todayISO, useStatusColors } from '../utils/rutas';
 import { formatCurrency } from '../utils/currency';
 import { haptics } from '../utils/haptics';
 
@@ -99,6 +99,7 @@ function deltaAccent(tone, themeColors) {
 // Dashboard de analytics por día/mes/año. role=owner|driver|all acota el
 // alcance (propietario vs viajes hechos como conductor). Admin pasa userId.
 export default function UserStatsDashboard({ userId, role, reloadKey = 0 }) {
+  const STATUS_COLORS = useStatusColors();
   const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];

@@ -147,7 +147,7 @@ export default function JornadaBanner({
                 />
               </View>
               {activeCode ? (
-                <Button mode="contained" onPress={copy} compact textClassName="text-sm text-white">
+                <Button mode="contained" onPress={copy} compact textClassName="text-sm text-onPrimary dark:text-onPrimary-dark">
                   {t('common.copy')}
                 </Button>
               ) : (
@@ -157,7 +157,7 @@ export default function JornadaBanner({
                   loading={generating}
                   disabled={generating}
                   compact
-                  textClassName="text-sm text-white"
+                  textClassName="text-sm text-onPrimary dark:text-onPrimary-dark"
                 >
                   {t('ownerCode.generate')}
                 </Button>

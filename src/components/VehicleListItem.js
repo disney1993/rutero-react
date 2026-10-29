@@ -46,8 +46,8 @@ export default function VehicleListItem({ vehicle, onEdit, onDelete, onBlocked, 
               </Text>
               {vehicle.is_default && (
                 <View style={{ backgroundColor: c.primary }} className="flex-row items-center rounded-full pl-1.5 pr-2 py-0.5">
-                  <Icon name="star" size={11} color="#fff" />
-                  <Text className="ml-1 text-[10px] font-semibold text-white">{t('vehicles.default')}</Text>
+                  <Icon name="star" size={11} color={c.onPrimary} />
+                  <Text className="ml-1 text-[10px] font-semibold text-onPrimary dark:text-onPrimary-dark">{t('vehicles.default')}</Text>
                 </View>
               )}
             </View>

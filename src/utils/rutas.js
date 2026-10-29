@@ -1,4 +1,6 @@
 import i18n, { dateLocale } from '../i18n';
+import { useThemeMode } from '../context/ThemeModeContext';
+import { statusColors } from '../theme';
 
 // Estados editables en formulario y menú rápido. Cancelar no es un estado
 // que se elija: es el swipe a la izquierda (borrado blando).
@@ -7,11 +9,11 @@ export const STATUS_OPTIONS = ['pending', 'completed'].map((value) => ({
   get label() { return i18n.t(`status.${value}`); },
 }));
 
-export const STATUS_COLORS = {
-  pending: '#FFA726',
-  completed: '#16A34A',
-  cancelled: '#DC2626',
-};
+// Colores de estado del modo activo (claro: sistema iOS; oscuro: neón).
+export function useStatusColors() {
+  const { resolvedScheme } = useThemeMode();
+  return statusColors[resolvedScheme];
+}
 
 export function statusLabel(status) {
   return i18n.t(`status.${status}`, { defaultValue: status });

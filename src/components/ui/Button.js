@@ -4,7 +4,7 @@ import Icon from './Icon';
 import { cn } from './cn';
 import { haptics } from '../../utils/haptics';
 import { useThemeMode } from '../../context/ThemeModeContext';
-import { colors } from '../../theme';
+import { colors, elevation } from '../../theme';
 
 const MODE_CONTAINER = {
   contained: 'bg-primary dark:bg-primary-dark',
@@ -13,7 +13,7 @@ const MODE_CONTAINER = {
 };
 
 const MODE_TEXT = {
-  contained: 'text-white',
+  contained: 'text-onPrimary dark:text-onPrimary-dark',
   outlined: 'text-primary dark:text-primary-dark',
   text: 'text-primary dark:text-primary-dark',
 };
@@ -33,8 +33,11 @@ export default function Button({
   children,
 }) {
   const { resolvedScheme } = useThemeMode();
-  const accentColor = iconColor || (mode === 'contained' ? '#fff' : colors[resolvedScheme].primary);
+  const c = colors[resolvedScheme];
+  const accentColor = iconColor || (mode === 'contained' ? c.onPrimary : c.primary);
   const isDisabled = disabled || loading;
+  // Botón principal: plano en claro (como iOS), halo neón en oscuro.
+  const glow = resolvedScheme === 'dark' && mode === 'contained' && !isDisabled ? elevation(resolvedScheme, { color: c.primary, strength: 'strong' }) : undefined;
   return (
     <Pressable
       onPress={(e) => {
@@ -42,7 +45,7 @@ export default function Button({
         onPress?.(e);
       }}
       disabled={isDisabled}
-      style={style}
+      style={[glow, style]}
       className={cn(
         'flex-row items-center justify-center rounded-full active:opacity-80 active:scale-[0.97]',
         compact ? 'px-3 py-1.5' : 'px-6 py-2.5',
@@ -56,7 +59,7 @@ export default function Button({
           <ActivityIndicator size="small" color={accentColor} style={{ marginRight: 8 }} />
         )}
         {!loading && icon && <Icon name={icon} size={18} color={accentColor} className="mr-2" />}
-        <Text style={contentStyle} className={cn('font-medium', textClassName || MODE_TEXT[mode])}>
+        <Text style={contentStyle} className={cn('font-semibold', textClassName || MODE_TEXT[mode])}>
           {children}
         </Text>
       </>

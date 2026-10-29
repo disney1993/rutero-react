@@ -36,7 +36,7 @@ export default function Menu({ visible, onDismiss, anchor, children }) {
           {position && (
             <View
               style={{ position: 'absolute', top: position.y, left: Math.max(8, position.x - 160) }}
-              className="min-w-[180px] rounded-xl bg-surface dark:bg-surface-dark shadow-lg py-1"
+              className="min-w-[180px] rounded-2xl bg-surface dark:bg-surface-dark dark:border dark:border-border-dark shadow-lg py-1"
             >
               {children}
             </View>

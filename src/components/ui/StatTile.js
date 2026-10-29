@@ -1,18 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { cn } from './cn';
-
-function tintFromHex(hex, alpha = 0.15) {
-  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return undefined;
-  const raw = hex.slice(1);
-  const full = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw;
-  if (full.length !== 6) return undefined;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return undefined;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
+import { withAlpha } from '../../theme';
 
 /**
  * @param {object} props
@@ -22,7 +11,7 @@ function tintFromHex(hex, alpha = 0.15) {
  * @param {boolean} [props.compact] Denser tile for 3-up phone rows
  */
 export default function StatTile({ label, value, color, compact = false }) {
-  const bgTint = tintFromHex(color, 0.15);
+  const bgTint = withAlpha(color, 0.14);
   const accentStyle = color ? { color } : undefined;
 
   return (
@@ -39,7 +28,7 @@ export default function StatTile({ label, value, color, compact = false }) {
         adjustsFontSizeToFit={compact}
         minimumFontScale={0.7}
         className={cn(
-          'font-bold text-center',
+          'font-bold tracking-tight text-center',
           compact ? 'text-base' : 'text-xl',
           !color && 'text-primary dark:text-primary-dark',
         )}

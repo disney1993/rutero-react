@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+// Mismos valores que src/theme.js — mantener ambos en sync si cambian.
 module.exports = {
   content: ['./index.js', './src/**/*.{js,jsx}'],
   presets: [require('nativewind/preset')],
@@ -6,16 +7,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#5A31D8', dark: '#9D3DF2' },
-        secondary: { DEFAULT: '#0E7C7B', dark: '#00E5FF' },
-        tertiary: { DEFAULT: '#B45309', dark: '#E9FF3D' },
-        background: { DEFAULT: '#F6F4EF', dark: '#0A0912' },
-        surface: { DEFAULT: '#ECE8F7', dark: '#211E3C' },
-        onSurface: { DEFAULT: '#241F33', dark: '#F1EEFF' },
-        onSurfaceVariant: { DEFAULT: '#5C5568', dark: '#B6AFD6' },
-        surfaceDisabled: { DEFAULT: '#DAD3EC', dark: '#363159' },
-        border: { DEFAULT: '#D3CBE6', dark: '#4A4480' },
-        error: { DEFAULT: '#C0293D', dark: '#FF3B6B' },
+        primary: { DEFAULT: '#007AFF', dark: '#B15CFF' },
+        onPrimary: { DEFAULT: '#FFFFFF', dark: '#0A0612' },
+        secondary: { DEFAULT: '#248A3D', dark: '#39FF9F' },
+        tertiary: { DEFAULT: '#C93400', dark: '#FFC53D' },
+        background: { DEFAULT: '#F2F2F7', dark: '#07060D' },
+        surface: { DEFAULT: '#FFFFFF', dark: '#13111F' },
+        onSurface: { DEFAULT: '#1C1C1E', dark: '#F2EFFF' },
+        onSurfaceVariant: { DEFAULT: '#6C6C70', dark: '#A49FC4' },
+        surfaceDisabled: { DEFAULT: '#E5E5EA', dark: '#241F3A' },
+        fill: { DEFAULT: 'rgba(118,118,128,0.14)', dark: 'rgba(177,92,255,0.08)' },
+        border: { DEFAULT: '#D1D1D6', dark: '#2E2850' },
+        error: { DEFAULT: '#D70015', dark: '#FF2E88' },
       },
     },
   },

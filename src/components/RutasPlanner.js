@@ -9,7 +9,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { api, errorMessage } from '../utils/apiClient';
-import { STATUS_COLORS, STATUS_OPTIONS, shiftDate, formatDateHuman, todayISO, getDriverPermissions } from '../utils/rutas';
+import { useStatusColors, STATUS_OPTIONS, shiftDate, formatDateHuman, todayISO, getDriverPermissions } from '../utils/rutas';
 import { rutaHour } from '../utils/schedule';
 import { formatCurrency } from '../utils/currency';
 import { getInitials, resolveAvatarColor } from '../utils/avatar';
@@ -81,6 +81,7 @@ function rowAvatarPerson(item) {
 }
 
 function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, user, canDelete, onEdit, onDelete, onQuickUpdate, onSwiped, peek, onPeekDone, isWide, onRestore }) {
+  const STATUS_COLORS = useStatusColors();
   const { t } = useTranslation();
   // Viaje eliminado (borrado blando): se ve atenuado y tachado; tocarlo ofrece restaurarlo.
   const isDeleted = !!item.deleted_at;

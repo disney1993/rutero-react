@@ -27,7 +27,8 @@ function toPayload(form) {
     plate: form.plate.trim(),
     make: form.make.trim(),
     model: form.model.trim(),
-    color: form.color.trim(),
+    // Siempre hex "#RRGGBB" (la API rechaza cualquier otra cosa).
+    color: form.color.trim().toUpperCase(),
     year: Number(form.year),
     seats: Number(form.seats),
     // Se envía la clave canónica (p. ej. 'moto' → 'motocicleta').
@@ -49,7 +50,7 @@ function validate(form) {
   if (!form.model.trim()) e.model = i18n.t('vehicleForm.errors.modelRequired');
 
   if (!form.color.trim()) e.color = i18n.t('vehicleForm.errors.colorRequired');
-  else if (form.color.trim().startsWith('#') && !isValidHexColor(form.color)) e.color = i18n.t('vehicleForm.errors.colorInvalid');
+  else if (!isValidHexColor(form.color)) e.color = i18n.t('vehicleForm.errors.colorInvalid');
 
   if (!YEAR_OPTIONS.includes(String(form.year))) e.year = i18n.t('vehicleForm.errors.yearRequired');
   if (!SEAT_OPTIONS.includes(String(form.seats))) e.seats = i18n.t('vehicleForm.errors.seatsRequired');
@@ -78,7 +79,8 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
           plate: sanitizePlate(initialValues.plate),
           make: initialValues.make || '',
           model: initialValues.model || '',
-          color: initialValues.color || '',
+          // Vehículos guardados por nombre ("Blanco") pasan a su hex.
+          color: carColorToHex(initialValues.color) || '',
           vehicle_type: initialValues.vehicle_type || '',
           notes: initialValues.notes || '',
           year: initialValues.year ? String(initialValues.year) : '',
@@ -211,6 +213,7 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
           required
           value={form.color}
           onChange={set('color')}
+          storeAsHex
           error={fieldError('color')}
           className="mb-1"
         />

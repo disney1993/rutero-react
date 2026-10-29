@@ -124,8 +124,8 @@ function CustomColorSheet({ visible, initial, onCancel, onConfirm, title, extraC
 
 /**
  * Color picker with palette swatches + free hex via reanimated-color-picker.
- * - Default (vehicles): inline palette + sheet with extra car tones.
- * - storeAsHex (avatars): always stores #RRGGBB.
+ * - Default: inline palette + sheet with extra car tones; stores the palette name.
+ * - storeAsHex (vehicles, avatars): always stores #RRGGBB; names are only labels.
  * - triggerOnly: no inline grid; a button/swatch opens the sheet (palette → sheet swatches).
  */
 export default function ColorPickerField({

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Dialog, Input, Button } from './ui';
 import PaymentMethodField from './ui/PaymentMethodField';
 import VehicleSelect from './ui/VehicleSelect';
-import { STATUS_COLORS, statusLabel, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
+import { useStatusColors, statusLabel, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
 import { PHONE_REGEX } from '../utils/validators';
 import { roundToNearest5, formatCurrency, DEFAULT_PRICE_PER_KM } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
@@ -88,6 +88,7 @@ function validate(form, fieldSet, vehicles) {
 // fieldSet 'full': create or owner/admin edit. 'driverUpdate': driver editing
 // a ruta they did not create (final_price, payment_method, notes; status via swipe).
 export default function RutaFormModal({ visible, onDismiss, onSubmit, initialValues, defaultDate, defaultTime, fieldSet = 'full', vehicles = [], submitting }) {
+  const STATUS_COLORS = useStatusColors();
   const { t } = useTranslation();
   const { user } = useAuth();
   const [form, setForm] = useState(emptyForm);

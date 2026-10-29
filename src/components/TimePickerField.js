@@ -156,7 +156,7 @@ export default function TimePickerField({ label, value, onChange, error, require
                   className={cn(
                     'text-center py-2.5 rounded-lg',
                     item === hour
-                      ? 'bg-primary dark:bg-primary-dark text-white'
+                      ? 'bg-primary dark:bg-primary-dark text-onPrimary dark:text-onPrimary-dark'
                       : 'text-onSurface dark:text-onSurface-dark'
                   )}
                   style={{ fontVariant: ['tabular-nums'] }}
@@ -176,7 +176,7 @@ export default function TimePickerField({ label, value, onChange, error, require
                   className={cn(
                     'text-center py-2.5 rounded-lg',
                     item === minute
-                      ? 'bg-primary dark:bg-primary-dark text-white'
+                      ? 'bg-primary dark:bg-primary-dark text-onPrimary dark:text-onPrimary-dark'
                       : 'text-onSurface dark:text-onSurface-dark'
                   )}
                   style={{ fontVariant: ['tabular-nums'] }}

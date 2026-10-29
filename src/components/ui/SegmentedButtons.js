@@ -17,7 +17,7 @@ export default function SegmentedButtons({
   inline = false,
 }) {
   const { resolvedScheme } = useThemeMode();
-  const primaryColor = colors[resolvedScheme].primary;
+  const { primary: primaryColor, onPrimary } = colors[resolvedScheme];
   return (
     <View
       style={style}
@@ -52,7 +52,7 @@ export default function SegmentedButtons({
             )}
           >
             {!!b.icon && (
-              <Icon name={b.icon} size={compact ? 14 : 16} color={active ? '#fff' : primaryColor} className="mr-1" />
+              <Icon name={b.icon} size={compact ? 14 : 16} color={active ? onPrimary : primaryColor} className="mr-1" />
             )}
             {!!b.dotColor && (
               <View
@@ -60,7 +60,7 @@ export default function SegmentedButtons({
                 className={cn(
                   'rounded-full mr-1.5',
                   compact ? 'w-2 h-2' : 'w-2.5 h-2.5',
-                  active && 'border border-white'
+                  active && 'border border-onPrimary dark:border-onPrimary-dark'
                 )}
               />
             )}
@@ -68,7 +68,7 @@ export default function SegmentedButtons({
               numberOfLines={1}
               className={cn(
                 compact && 'text-xs',
-                active ? 'text-white' : 'text-primary dark:text-primary-dark'
+                active ? 'text-onPrimary dark:text-onPrimary-dark font-semibold' : 'text-primary dark:text-primary-dark'
               )}
             >
               {b.label}

@@ -8,12 +8,10 @@ import { Avatar, Button, Icon, PageContainer, cn } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useThemeMode } from '../context/ThemeModeContext';
-import { colors } from '../theme';
+import { colors, ringGradient } from '../theme';
 import { getInitials, resolveAvatarColor } from '../utils/avatar';
 import { haptics } from '../utils/haptics';
 import WorkModeSettings from '../components/WorkModeSettings';
-
-const RING_COLORS = ['#F58529', '#DD2A7B', '#8134AF', '#515BD4'];
 
 function MenuRow({ icon, label, hint, onPress, last }) {
   const { resolvedScheme } = useThemeMode();
@@ -72,7 +70,7 @@ export default function AccountScreen({ navigation }) {
       <PageContainer className="pt-4">
         <View className="items-center mb-4">
           <LinearGradient
-            colors={RING_COLORS}
+            colors={ringGradient[resolvedScheme]}
             start={{ x: 0, y: 1 }}
             end={{ x: 1, y: 0 }}
             style={{ width: 100, height: 100, borderRadius: 50, alignItems: 'center', justifyContent: 'center' }}

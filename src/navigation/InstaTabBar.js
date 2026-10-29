@@ -8,17 +8,15 @@ import Avatar from '../components/ui/Avatar';
 import Icon from '../components/ui/Icon';
 import { useAuth } from '../context/AuthContext';
 import { useThemeMode } from '../context/ThemeModeContext';
-import { colors } from '../theme';
+import { colors, ringGradient } from '../theme';
 import { getInitials, resolveAvatarColor } from '../utils/avatar';
 import { haptics } from '../utils/haptics';
 
 export const TAB_BAR_HEIGHT = 52;
 
-// Degradado del anillo del avatar activo (guiño a las "stories").
-const RING_COLORS = ['#F58529', '#DD2A7B', '#8134AF', '#515BD4'];
-
 function ProfileTabIcon({ focused, themeColors }) {
   const { user } = useAuth();
+  const { resolvedScheme } = useThemeMode();
   const avatar = (
     <Avatar.Text
       size={focused ? 24 : 26}
@@ -28,7 +26,7 @@ function ProfileTabIcon({ focused, themeColors }) {
   );
   if (!focused) return avatar;
   return (
-    <LinearGradient colors={RING_COLORS} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={styles.ring}>
+    <LinearGradient colors={ringGradient[resolvedScheme]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={styles.ring}>
       <View style={[styles.ringGap, { backgroundColor: themeColors.background }]}>{avatar}</View>
     </LinearGradient>
   );
@@ -63,7 +61,8 @@ function TabItem({ route, descriptor, focused, navigation, themeColors }) {
     }
   };
 
-  const color = focused ? themeColors.onSurface : themeColors.onSurfaceVariant;
+  // Pestaña activa en el color de acción (como la tab bar de iOS).
+  const color = focused ? themeColors.primary : themeColors.onSurfaceVariant;
 
   return (
     <Pressable

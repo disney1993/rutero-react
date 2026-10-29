@@ -24,14 +24,14 @@ function Dialog({ visible, onDismiss, children, dismissable = true, contentClass
       >
         <Pressable
           style={StyleSheet.absoluteFill}
-          className="bg-black/50"
+          className="bg-black/40 dark:bg-black/70"
           onPress={dismissable ? onDismiss : undefined}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('common.close')}
         />
         <View
           style={[{ maxWidth: 448 }, contentStyle]}
-          className={cn('w-full bg-surface dark:bg-surface-dark dark:border dark:border-border-dark rounded-2xl p-3', contentClassName)}
+          className={cn('w-full bg-surface dark:bg-surface-dark dark:border dark:border-border-dark rounded-3xl p-4', contentClassName)}
         >
           {children}
         </View>
@@ -41,7 +41,7 @@ function Dialog({ visible, onDismiss, children, dismissable = true, contentClass
 }
 
 Dialog.Title = ({ children, className }) => (
-  <Text className={cn('text-lg font-semibold mb-1 text-onSurface dark:text-onSurface-dark', className)}>
+  <Text className={cn('text-xl font-bold tracking-tight mb-1 text-onSurface dark:text-onSurface-dark', className)}>
     {children}
   </Text>
 );

@@ -89,7 +89,7 @@ const TIRE_COLOR = '#2A2A2E';
 // fino que no depende de la pintura, para que un coche blanco sobre fondo
 // claro (o negro sobre oscuro) se siga distinguiendo; en ese modo las ruedas
 // se pintan como neumáticos oscuros en vez de con el color de la carrocería.
-export default function VehicleTypeIcon({ type, size = 48, color = '#5A31D8', cutoutColor = '#FFFFFF', outlineColor }) {
+export default function VehicleTypeIcon({ type, size = 48, color = '#007AFF', cutoutColor = '#FFFFFF', outlineColor }) {
   const def = typeof type === 'string' ? getVehicleType(type) : type;
   const shape = def || VEHICLE_TYPES[0];
   const r = shape.wheelR ?? 4.5;

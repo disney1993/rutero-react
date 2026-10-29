@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 import FieldLabel from './FieldLabel';
+import { fieldFrameClass } from './Input';
 import VehicleTypeIcon from './VehicleTypeIcon';
 import { cn } from './cn';
 import { useThemeMode } from '../../context/ThemeModeContext';
@@ -90,8 +91,8 @@ export default function VehicleSelect({
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${selectedLabel || placeholder}`}
         className={cn(
-          'flex-row items-center border rounded-2xl px-3 active:opacity-70',
-          error ? 'border-error dark:border-error-dark' : 'border-border dark:border-border-dark',
+          'flex-row items-center px-3 active:opacity-70',
+          fieldFrameClass(error),
           disabled && 'opacity-50'
         )}
       >

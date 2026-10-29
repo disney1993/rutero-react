@@ -6,6 +6,16 @@ import { cn } from './cn';
 import { useThemeMode } from '../../context/ThemeModeContext';
 import { colors } from '../../theme';
 
+// Marco común de los campos de formulario. Claro: campo relleno gris sin
+// borde (iOS). Oscuro: relleno violeta muy tenue con borde fino. El borde en
+// claro es transparente (no ausente) para que no cambie la altura con error.
+export function fieldFrameClass(error) {
+  return cn(
+    'border rounded-xl bg-fill dark:bg-fill-dark',
+    error ? 'border-error dark:border-error-dark' : 'border-transparent dark:border-border-dark'
+  );
+}
+
 export default function Input({
   label,
   required,
@@ -24,10 +34,7 @@ export default function Input({
     <View style={style} className={cn('mb-1', className)}>
       <FieldLabel required={required}>{label}</FieldLabel>
       <View
-        className={cn(
-          'flex-row items-center border rounded-2xl px-3',
-          error ? 'border-error dark:border-error-dark' : 'border-border dark:border-border-dark'
-        )}
+        className={cn('flex-row items-center px-3', fieldFrameClass(error))}
       >
         {!!left && <Icon name={left} size={20} className="mr-2" />}
         <TextInput

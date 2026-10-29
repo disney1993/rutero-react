@@ -8,7 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { FAB, IconButton, SegmentedButtons } from '../components/ui';
 import { useThemeMode } from '../context/ThemeModeContext';
-import { colors } from '../theme';
+import { colors, withAlpha } from '../theme';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { useSelectedUser } from '../context/SelectedUserContext';
@@ -19,7 +19,7 @@ import {
   isOwnerCapable,
 } from '../utils/capabilities';
 import { useDriverJornada } from '../hooks/useDriverJornada';
-import { STATUS_COLORS } from '../utils/rutas';
+import { useStatusColors } from '../utils/rutas';
 import { toastError, toastSuccess } from '../utils/toast';
 import { haptics } from '../utils/haptics';
 import RutaFormModal from '../components/RutaFormModal';
@@ -67,6 +67,7 @@ export default function RutasCalendarScreen({ navigation }) {
   const targetUser = isAdmin ? selectedUser : user;
   const { resolvedScheme } = useThemeMode();
   const c = colors[resolvedScheme];
+  const STATUS_COLORS = useStatusColors();
 
   const ownerCapable = isOwnerCapable(user, isAdmin);
   const driverMode = isDriverWorkMode(user, isAdmin);
@@ -199,9 +200,21 @@ export default function RutasCalendarScreen({ navigation }) {
     );
   }
 
+  // Eventos al estilo Calendario de iOS: fondo tintado del color de estado,
+  // franja izquierda sólida y texto normal (legible también sobre neón).
+  const eventCellStyle = (event) => {
+    const tone = STATUS_COLORS[event.ruta.status] || c.primary;
+    return {
+      backgroundColor: withAlpha(tone, resolvedScheme === 'dark' ? 0.16 : 0.2),
+      borderLeftWidth: 3,
+      borderLeftColor: tone,
+      borderRadius: 8,
+    };
+  };
+
   const calendarTheme = {
     palette: {
-      primary: { main: c.primary, contrastText: '#FFFFFF' },
+      primary: { main: c.primary, contrastText: c.onSurface },
       nowIndicator: c.error,
       gray: { 100: c.border, 200: c.border, 300: c.border, 500: c.onSurfaceVariant, 800: c.onSurface },
       moreLabel: c.primary,
@@ -303,11 +316,8 @@ export default function RutasCalendarScreen({ navigation }) {
                 // salvo el lunes.
                 headerContainerStyle={{ backgroundColor: c.background }}
                 bodyContainerStyle={mode === 'month' ? undefined : { backgroundColor: c.background }}
-                eventCellStyle={(event) => ({
-                  backgroundColor: STATUS_COLORS[event.ruta.status] || c.primary,
-                  borderRadius: 8,
-                })}
-                allDayEventCellStyle={(event) => ({ backgroundColor: STATUS_COLORS[event.ruta.status] || c.primary, borderRadius: 8 })}
+                eventCellStyle={eventCellStyle}
+                allDayEventCellStyle={eventCellStyle}
                 onPressEvent={openEdit}
                 onPressCell={(d) => {
                   if (mode === 'month') { haptics.selection(); setDate(d); setMode('day'); }

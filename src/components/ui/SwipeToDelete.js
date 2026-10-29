@@ -22,7 +22,7 @@ function ActionPanel({ drag, side, blocked, label, icon, color, c, roundedClass 
     const scale = interpolate(sign * drag.value, [0, ACTION_WIDTH * 0.6, ACTION_WIDTH], [0.6, 0.9, 1.1], Extrapolation.CLAMP);
     return { transform: [{ scale }] };
   });
-  const fg = blocked ? c.onSurfaceVariant : '#fff';
+  const fg = blocked ? c.onSurfaceVariant : c.onPrimary;
   return (
     <View
       style={{ backgroundColor: blocked ? c.surfaceDisabled : color }}
@@ -115,7 +115,7 @@ export default function SwipeToDelete({
           className={cn('items-end justify-center pr-5', roundedClass)}
         >
           <Animated.View style={peekIconStyle}>
-            <Icon name={blocked ? 'lock-outline' : deleteIcon} size={24} color={blocked ? c.onSurfaceVariant : '#fff'} />
+            <Icon name={blocked ? 'lock-outline' : deleteIcon} size={24} color={blocked ? c.onSurfaceVariant : c.onPrimary} />
           </Animated.View>
         </View>
       )}

@@ -102,7 +102,7 @@ export default function AdminDashboardScreen({ navigation }) {
                         : 'bg-surfaceDisabled dark:bg-surfaceDisabled-dark'
                     )}
                   >
-                    <Text className={cn('text-xs', typeFilter === f.value ? 'text-white' : 'text-onSurface dark:text-onSurface-dark')}>
+                    <Text className={cn('text-xs', typeFilter === f.value ? 'text-onPrimary dark:text-onPrimary-dark' : 'text-onSurface dark:text-onSurface-dark')}>
                       {t(f.key)}
                     </Text>
                   </Pressable>
