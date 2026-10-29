@@ -14,7 +14,10 @@
       "appName": "Rutero",
       "googleIosClientId": "",
       "googleAndroidClientId": "",
-      "googleWebClientId": ""
+      "googleWebClientId": "",
+      "eas": {
+        "projectId": "27477bd5-a143-4823-a07e-b46c8e92bba8"
+      }
     },
     "plugins": [
       "expo-image",
