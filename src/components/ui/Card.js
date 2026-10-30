@@ -7,6 +7,11 @@ import { colors, elevation } from '../../theme';
 
 // Claro: tarjeta blanca sobre fondo gris con sombra muy difusa (iOS).
 // Oscuro: superficie violeta profundo con borde fino y un halo violeta tenue.
+//
+// La sombra (boxShadow) y el recorte del contenido (overflow-hidden) van en
+// capas distintas: en Android, juntos en la misma vista, el contenido de la
+// tarjeta podía no dibujarse (tarjetas en blanco) y además el recorte se come
+// la sombra. Fuera: sombra + fondo + borde. Dentro: recorte con el mismo radio.
 function Card({ children, style, className, onPress }) {
   const { resolvedScheme } = useThemeMode();
   const Wrapper = onPress ? Pressable : View;
@@ -14,9 +19,13 @@ function Card({ children, style, className, onPress }) {
     <Wrapper
       onPress={onPress && ((e) => { haptics.light(); onPress(e); })}
       style={[elevation(resolvedScheme, { color: colors[resolvedScheme].primary }), style]}
-      className={cn('rounded-3xl bg-surface dark:bg-surface-dark dark:border dark:border-border-dark overflow-hidden', onPress && 'active:opacity-90', className)}
+      className={cn('rounded-3xl bg-surface dark:bg-surface-dark dark:border dark:border-border-dark', onPress && 'active:opacity-90', className)}
     >
-      {children}
+      {/* shrink: si la tarjeta tiene maxHeight (p. ej. sugerencias de
+          dirección), la capa interior se ajusta a ella y recorta lo que sobra. */}
+      <View className="shrink rounded-3xl overflow-hidden">
+        {children}
+      </View>
     </Wrapper>
   );
 }

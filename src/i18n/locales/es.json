@@ -505,6 +505,7 @@
     "created": "Ruta creada",
     "saveError": "No se pudo guardar la ruta",
     "cancel": "Cancelar",
+    "swipeComplete": "Completar",
     "deleted": "Viaje cancelado · tócalo para restaurarlo",
     "deleteError": "No se pudo cancelar el viaje",
     "updateError": "No se pudo actualizar la ruta",

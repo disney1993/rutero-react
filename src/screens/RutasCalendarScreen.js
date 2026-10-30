@@ -131,6 +131,9 @@ export default function RutasCalendarScreen({ navigation }) {
   }, [isAdmin, targetUser?.id, driverMode]));
 
   const events = useMemo(() => (needsJoin ? [] : rutas.map(toEvent)), [rutas, needsJoin]);
+  // La franja "todo el día" ocupa otra fila de hora entera bajo la cabecera;
+  // solo hace falta si hay algún viaje antiguo sin hora.
+  const hasAllDayEvents = useMemo(() => events.some((e) => !e.ruta.trip_time), [events]);
   const locale = i18n.language === 'en' ? 'en-gb' : 'es';
   const createBlocked = needsJoin
     || (!isAdmin && !driverMode && vehiclesLoaded && vehicles.length === 0);
@@ -274,14 +277,11 @@ export default function RutasCalendarScreen({ navigation }) {
             />
             <View className="flex-row items-center mt-2">
               <IconButton icon="chevron-left" onPress={() => shift(-1)} accessibilityLabel={t('calendar.previous')} />
-              {/* Day view already shows Wed / 14 in the calendar header; skip the long date label. */}
-              {mode === 'day' ? (
-                <View className="flex-1" />
-              ) : (
-                <Text numberOfLines={1} className="flex-1 text-center font-semibold capitalize text-onSurface dark:text-onSurface-dark">
-                  {title}
-                </Text>
-              )}
+              {/* En la vista Día la fecha va aquí y no en la cabecera del
+                  calendario (ver renderHeader), que ocupaba mucho alto. */}
+              <Text numberOfLines={1} className="flex-1 text-center font-semibold capitalize text-onSurface dark:text-onSurface-dark">
+                {title}
+              </Text>
               {loading && <ActivityIndicator size="small" color={c.primary} className="mr-1" />}
               <Pressable
                 onPress={() => { haptics.selection(); setDate(new Date()); }}
@@ -316,8 +316,17 @@ export default function RutasCalendarScreen({ navigation }) {
                 // salvo el lunes.
                 headerContainerStyle={{ backgroundColor: c.background }}
                 bodyContainerStyle={mode === 'month' ? undefined : { backgroundColor: c.background }}
+                showAllDayEventCell={hasAllDayEvents}
+                // Vista Día: sin cabecera (día de la semana + número grande); la
+                // fecha ya se muestra entre las flechas. Semana/mes sí la necesitan.
+                renderHeader={mode === 'day' && !hasAllDayEvents ? () => null : undefined}
                 eventCellStyle={eventCellStyle}
                 allDayEventCellStyle={eventCellStyle}
+                // La librería no usa palette.contrastText para el texto de los
+                // eventos (toma el blanco de sus paletas de solapamiento):
+                // sobre el fondo tintado hace falta el color de texto normal.
+                eventCellTextColor={c.onSurface}
+                allDayEventCellTextColor={c.onSurface}
                 onPressEvent={openEdit}
                 onPressCell={(d) => {
                   if (mode === 'month') { haptics.selection(); setDate(d); setMode('day'); }

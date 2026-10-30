@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
 import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -11,8 +10,14 @@ const ThemeModeContext =
   (globalThis.__RUTERO_THEME_MODE_CONTEXT__ = createContext(null));
 
 export function ThemeModeProvider({ children }) {
-  const systemScheme = useColorScheme();
-  const { setColorScheme } = useNativeWindColorScheme();
+  // NativeWind es la única fuente de verdad del modo resuelto: lo usan las
+  // clases `dark:` y, a través de resolvedScheme, los colores que van por
+  // `style` (tarjetas, iconos, cabecera, tab bar, pickers). Antes este último
+  // salía de useColorScheme() de React Native y podía desincronizarse de las
+  // clases (texto de modo oscuro sobre fondo claro en Android). Además, una vez
+  // forzado claro/oscuro, useColorScheme() devuelve el modo forzado y "Sistema"
+  // dejaba de seguir al teléfono.
+  const { colorScheme, setColorScheme } = useNativeWindColorScheme();
   const [mode, setModeState] = useState('system');
 
   useEffect(() => {
@@ -26,13 +31,13 @@ export function ThemeModeProvider({ children }) {
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   };
 
-  const resolvedScheme = mode === 'system' ? (systemScheme || 'light') : mode;
-
-  // Mantiene las clases `dark:` de NativeWind sincronizadas con el modo
-  // elegido por el usuario (system/light/dark), no solo con el SO.
+  // Se pasa el modo tal cual ('system' incluido): NativeWind lo aplica a las
+  // clases y al tema nativo de Android/iOS, y con 'system' vuelve a seguir al SO.
   useEffect(() => {
-    setColorScheme(resolvedScheme);
-  }, [resolvedScheme]);
+    setColorScheme(mode);
+  }, [mode]);
+
+  const resolvedScheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   return (
     <ThemeModeContext.Provider value={{ mode, setMode, resolvedScheme }}>

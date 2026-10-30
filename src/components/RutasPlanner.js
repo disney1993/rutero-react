@@ -103,10 +103,10 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
   // en la lista, vuelve a pendiente). ← cancelar (= borrado blando).
   const rightSwipeAction = (() => {
     if (item.status !== 'completed') {
-      return { status: 'completed', label: t('status.completed'), icon: 'check-circle-outline', color: STATUS_COLORS.completed };
+      return { status: 'completed', label: t('planner.swipeComplete'), icon: 'check-circle-outline', color: STATUS_COLORS.completed };
     }
     if (!alreadyMarked) {
-      return { status: 'completed', label: t('planner.markCompleted'), icon: 'check-circle-outline', color: STATUS_COLORS.completed };
+      return { status: 'completed', label: t('planner.swipeComplete'), icon: 'check-circle-outline', color: STATUS_COLORS.completed };
     }
     return { status: 'pending', label: t('status.pending'), icon: 'clock-outline', color: STATUS_COLORS.pending };
   })();

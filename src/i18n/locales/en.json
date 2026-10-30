@@ -505,6 +505,7 @@
     "created": "Route created",
     "saveError": "Could not save the route",
     "cancel": "Cancel",
+    "swipeComplete": "Complete",
     "deleted": "Trip cancelled · tap it to restore it",
     "deleteError": "Could not cancel the trip",
     "updateError": "Could not update the route",

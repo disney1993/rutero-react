@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -59,8 +59,11 @@ function PreferencesSync() {
   return null;
 }
 
-function RootNavigator({ navTheme }) {
+function RootNavigator({ navTheme, scheme }) {
   const { user, bootstrapping } = useAuth();
+  // Estado de navegación guardado para restaurarlo al remontar (ver key abajo).
+  // Se asocia al tipo de contenido para no aplicar el de las pestañas al login.
+  const navState = useRef({ kind: null, state: undefined });
 
   if (bootstrapping) {
     return (
@@ -71,12 +74,25 @@ function RootNavigator({ navTheme }) {
   }
 
   let content;
-  if (!user) content = <AuthNavigator />;
-  else if (user.profile_incomplete) content = <CompleteProfileScreen />;
-  else content = <AppTabs />;
+  let kind;
+  if (!user) { content = <AuthNavigator />; kind = 'auth'; }
+  else if (user.profile_incomplete) { content = <CompleteProfileScreen />; kind = 'profile'; }
+  else { content = <AppTabs />; kind = 'app'; }
+
+  // Al cambiar de tema se remonta todo el árbol (key={scheme}): en Android,
+  // NativeWind no recalcula las clases `dark:` de los componentes ya montados
+  // y, al volver de oscuro a claro, quedaban textos y bordes del modo oscuro
+  // sobre tarjetas claras (invisibles). Se restaura la pantalla en la que
+  // estaba el usuario para que el cambio no le devuelva al inicio.
+  const initialState = navState.current.kind === kind ? navState.current.state : undefined;
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      key={scheme}
+      theme={navTheme}
+      initialState={initialState}
+      onStateChange={(state) => { navState.current = { kind, state }; }}
+    >
       {content}
     </NavigationContainer>
   );
@@ -99,7 +115,7 @@ function ThemedApp() {
       <PreferencesSync />
       <ConfirmProvider>
         <SelectedUserProvider>
-          <RootNavigator navTheme={navTheme} />
+          <RootNavigator navTheme={navTheme} scheme={resolvedScheme} />
         </SelectedUserProvider>
       </ConfirmProvider>
       <FlashMessage position="top" />

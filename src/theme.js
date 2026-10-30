@@ -50,11 +50,14 @@ export const colors = {
   },
 };
 
-// Colores de estado de las rutas (puntos, fondos de fila, gráficas). Mismo
-// significado que la paleta: verde = completado, ámbar = pendiente,
-// rojo/rosa = cancelado. Usar con useStatusColors() (utils/rutas).
+// Colores de estado de las rutas (puntos, fondos de fila, gráficas y texto de
+// las estadísticas). Mismo significado que la paleta: verde = completado,
+// ámbar = pendiente, rojo/rosa = cancelado. En claro son las variantes
+// accesibles de iOS (= secondary/tertiary/error): los tonos estándar
+// (#34C759, #FF9500) no llegan a 2:1 como texto sobre su fondo tintado.
+// Usar con useStatusColors() (utils/rutas).
 export const statusColors = {
-  light: { pending: '#FF9500', completed: '#34C759', cancelled: '#FF3B30' },
+  light: { pending: '#C93400', completed: '#248A3D', cancelled: '#D70015' },
   dark: { pending: '#FFC53D', completed: '#39FF9F', cancelled: '#FF2E88' },
 };
 
@@ -73,6 +76,20 @@ export function withAlpha(hex, alpha) {
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
   if ([r, g, b].some((n) => Number.isNaN(n))) return undefined;
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Texto legible sobre un fondo de color arbitrario (avatares, colores de
+// coche): blanco mientras alcance `minWhiteContrast` (3:1 = WCAG AA para texto
+// grande y negrita, como las iniciales del avatar); si no, casi negro.
+export function readableOn(bgHex, minWhiteContrast = 3) {
+  const rgb = withAlpha(bgHex, 1)?.match(/\d+/g)?.slice(0, 3).map(Number);
+  if (!rgb) return '#FFFFFF';
+  const [r, g, b] = rgb.map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 1.05 / (lum + 0.05) >= minWhiteContrast ? '#FFFFFF' : '#1C1C1E';
 }
 
 // Elevación según el modo: en claro una sombra neutra muy suave (tarjetas de
