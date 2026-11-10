@@ -3,6 +3,9 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Dialog, Input, Button } from './ui';
 import PaymentMethodField from './ui/PaymentMethodField';
 import VehicleSelect from './ui/VehicleSelect';
+import FieldLabel from './ui/FieldLabel';
+import DriverAvatarPicker from './DriverAvatarPicker';
+import { useTeam } from '../hooks/useTeam';
 import { useStatusColors, statusLabel, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
 import { PHONE_REGEX } from '../utils/validators';
 import { roundToNearest5, formatCurrency, DEFAULT_PRICE_PER_KM } from '../utils/currency';
@@ -52,6 +55,8 @@ const emptyForm = {
   status: 'pending',
   notes: '',
   vehicle_id: null,
+  // Conductor del equipo al que se asigna el viaje (null = lo hace el propietario).
+  driver_id: null,
 };
 
 function validate(form, fieldSet, vehicles) {
@@ -90,7 +95,7 @@ function validate(form, fieldSet, vehicles) {
 export default function RutaFormModal({ visible, onDismiss, onSubmit, initialValues, defaultDate, defaultTime, fieldSet = 'full', vehicles = [], submitting }) {
   const STATUS_COLORS = useStatusColors();
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
@@ -99,6 +104,12 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
   // Last auto-filled km: overwrite only if current matches or is empty.
   const lastAutoDistanceRef = useRef(null);
   const isEditing = !!initialValues;
+  // Asignar conductor: solo el propietario sobre sus propios viajes (con flota).
+  const showDriverSelect = fieldSet === 'full' && vehicles.length > 0 && !isAdmin
+    && (!isEditing || initialValues?.owner_id === user?.id);
+  const team = useTeam({ enabled: visible && showDriverSelect });
+  // Si el usuario ya eligió conductor, el predeterminado no lo pisa al llegar el equipo.
+  const driverTouchedRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
@@ -106,6 +117,7 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
       setDistanceError('');
       setMetaOpen(false);
       lastAutoDistanceRef.current = null;
+      driverTouchedRef.current = false;
       if (initialValues) {
         setForm({
           ...emptyForm,
@@ -141,6 +153,32 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
   }, [visible, initialValues, defaultDate, defaultTime]);
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+
+  // Conductor elegido en el selector de avatares (null = el propietario).
+  const changeDriver = (driverId) => {
+    driverTouchedRef.current = true;
+    const link = team.active.find((l) => l.driver?.id === driverId);
+    setForm((f) => ({
+      ...f,
+      driver_id: driverId,
+      // Al crear, propone el vehículo habitual de ese conductor.
+      vehicle_id: !isEditing && link?.default_vehicle_id ? link.default_vehicle_id : f.vehicle_id,
+    }));
+  };
+
+  // Viaje nuevo: propone el conductor predeterminado del equipo (y su
+  // vehículo habitual) en cuanto se carga el equipo.
+  useEffect(() => {
+    if (!visible || isEditing || driverTouchedRef.current) return;
+    const def = team.active.find((l) => l.is_default);
+    if (!def) return;
+    setForm((f) => ({
+      ...f,
+      driver_id: def.driver.id,
+      vehicle_id: def.default_vehicle_id || f.vehicle_id,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, isEditing, team.links]);
 
   const selectOrigin = (place) => setForm((f) => ({ ...f, origin: place.display_name, origin_lat: place.lat, origin_lng: place.lon }));
   const selectDestination = (place) => setForm((f) => ({ ...f, destination: place.display_name, destination_lat: place.lat, destination_lng: place.lon }));
@@ -228,6 +266,7 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
         price_per_km: form.price_per_km ? Number(form.price_per_km) : null,
         vehicle_id: form.vehicle_id,
       });
+      if (showDriverSelect) payload.driver_id = form.driver_id || null;
     }
 
     onSubmit(payload);
@@ -429,6 +468,19 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
                 />
               </View>
             </View>
+
+            {showDriverSelect && (team.active.length > 0 || !!form.driver_id) && (
+              <View className="mb-2">
+                <FieldLabel>{t('team.driver')}</FieldLabel>
+                <DriverAvatarPicker
+                  owner={user}
+                  team={team.active}
+                  value={form.driver_id}
+                  onChange={changeDriver}
+                  extra={form.driver_id && initialValues?.driver?.id === form.driver_id ? initialValues.driver : null}
+                />
+              </View>
+            )}
           </>
         )}
 

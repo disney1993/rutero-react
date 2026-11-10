@@ -21,6 +21,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeModeProvider, useThemeMode } from './context/ThemeModeContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { SelectedUserProvider } from './context/SelectedUserContext';
+import PendingInviteHandler from './components/PendingInviteHandler';
 
 const AuthStack = createNativeStackNavigator();
 
@@ -114,6 +115,7 @@ function ThemedApp() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <PreferencesSync />
       <ConfirmProvider>
+        <PendingInviteHandler />
         <SelectedUserProvider>
           <RootNavigator navTheme={navTheme} scheme={resolvedScheme} />
         </SelectedUserProvider>

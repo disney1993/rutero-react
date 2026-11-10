@@ -70,7 +70,8 @@ export function roundUpToNext15Minutes(date = new Date()) {
 
 // Refleja exactamente la regla de RutaController@update (rutero-api): el
 // dueño (u owner_id) puede todo; cualquier otro que sea el conductor
-// asignado solo puede tocar estado/pago/precio final/notas, nunca los
+// asignado (o un conductor del equipo, si el viaje está sin asignar) solo
+// puede tocar estado/pago/precio final/notas, nunca los
 // datos del viaje, y solo puede borrar si además fue quien la creó; nadie
 // más puede hacer nada. Única fuente de verdad para mostrar permisos en la
 // UI (p. ej. en la búsqueda de "Jornada").
@@ -81,6 +82,11 @@ export function getDriverPermissions(ruta, user) {
   }
   if (ruta.driver_id === user.id) {
     return { canEditFull: false, canChangeStatusPayment: true, canDelete: ruta.created_by === user.id };
+  }
+  // Viaje sin asignar de la jornada de su propietario (la API solo los envía a
+  // conductores del equipo): puede completarlo y, al hacerlo, pasa a su nombre.
+  if (ruta.driver_id == null && ruta.owner_id !== user.id) {
+    return { canEditFull: false, canChangeStatusPayment: true, canDelete: false };
   }
   return { canEditFull: false, canChangeStatusPayment: false, canDelete: false };
 }

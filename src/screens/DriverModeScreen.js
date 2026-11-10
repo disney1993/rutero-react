@@ -119,7 +119,7 @@ export default function DriverModeScreen() {
               key={jornada.selectedOwnerId}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
-              filterRuta={(ruta) => ruta.owner_id === jornada.selectedOwnerId && ruta.driver_id === user.id}
+              filterRuta={(ruta) => ruta.owner_id === jornada.selectedOwnerId && (ruta.driver_id === user.id || ruta.driver_id == null)}
               createExtra={{ owner_id: jornada.selectedOwnerId }}
               canDelete={(ruta) => ruta.created_by === user.id && ruta.driver_id === user.id}
               editFieldSet={() => 'driverUpdate'}

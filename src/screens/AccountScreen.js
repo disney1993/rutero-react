@@ -12,6 +12,7 @@ import { colors, ringGradient } from '../theme';
 import { getInitials, resolveAvatarColor } from '../utils/avatar';
 import { haptics } from '../utils/haptics';
 import WorkModeSettings from '../components/WorkModeSettings';
+import { isDriverWorkMode, isOwnerCapable } from '../utils/capabilities';
 
 function MenuRow({ icon, label, hint, onPress, last }) {
   const { resolvedScheme } = useThemeMode();
@@ -47,6 +48,8 @@ function MenuGroup({ children }) {
 export default function AccountScreen({ navigation }) {
   const { t } = useTranslation();
   const { user, isAdmin, logout } = useAuth();
+  // Mi equipo: solo en modo propietario (con flota) y no para el administrador.
+  const showTeam = !isAdmin && isOwnerCapable(user) && !isDriverWorkMode(user);
   const confirm = useConfirm();
   const { resolvedScheme } = useThemeMode();
   const c = colors[resolvedScheme];
@@ -99,6 +102,14 @@ export default function AccountScreen({ navigation }) {
         <MenuGroup>
           {isAdmin && (
             <MenuRow icon="calendar-month-outline" label={t('nav.rutasCalendar')} onPress={() => navigation.navigate('AccountCalendar')} />
+          )}
+          {showTeam && (
+            <MenuRow
+              icon="account-group-outline"
+              label={t('team.title')}
+              hint={t('team.menuHint')}
+              onPress={() => navigation.navigate('MyVehicles', { screen: 'MyVehiclesHome', params: { tab: 'drivers' } })}
+            />
           )}
           <MenuRow
             icon="account-cog-outline"

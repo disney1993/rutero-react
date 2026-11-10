@@ -11,5 +11,7 @@ module.exports = ({ config }) => ({
     googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID || config.extra.googleIosClientId,
     googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || config.extra.googleAndroidClientId,
     googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID || config.extra.googleWebClientId,
+    // Enlace de descarga que se añade a las invitaciones (APK de EAS o tienda); opcional.
+    downloadUrl: process.env.DOWNLOAD_URL || config.extra.downloadUrl || '',
   },
 });

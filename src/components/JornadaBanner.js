@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import Input from './ui/Input';
@@ -11,6 +11,8 @@ import { cn } from './ui/cn';
 import { api, errorMessage } from '../utils/apiClient';
 import { todayISO } from '../utils/rutas';
 import { toastSuccess } from '../utils/toast';
+import { useAuth } from '../context/AuthContext';
+import { inviteLink } from '../utils/pendingInvite';
 
 function monthFromISO(isoDate) {
   return String(isoDate || '').slice(0, 7);
@@ -35,6 +37,7 @@ export default function JornadaBanner({
   joinMessage = '',
 }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [codeType, setCodeType] = useState('month');
   const [activeCode, setActiveCode] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -98,6 +101,22 @@ export default function JornadaBanner({
     toastSuccess(t('ownerCode.copied'));
   };
 
+  // Hoja de compartir del sistema con el enlace de la jornada. Quien se une con
+  // él pasa también a formar parte del equipo del propietario.
+  const share = async () => {
+    if (!activeCode) return;
+    const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+    const [y, m, d] = (activeCode.type === 'day' ? codeDate(activeCode.valid_on) : `${activeCode.month}-01`).split('-');
+    const message = activeCode.type === 'day'
+      ? t('ownerCode.shareDay', { name, date: `${d}/${m}/${y}`, link: inviteLink(activeCode.code), code: activeCode.code })
+      : t('ownerCode.shareMonth', { name, month: `${m}/${y}`, link: inviteLink(activeCode.code), code: activeCode.code });
+    try {
+      await Share.share({ message, title: t('ownerCode.shareSubject') }, { subject: t('ownerCode.shareSubject'), dialogTitle: t('ownerCode.shareSubject') });
+    } catch {
+      // Hoja cerrada: nada que hacer.
+    }
+  };
+
   if (!showOwner && !showDriver) return null;
 
   return (
@@ -147,9 +166,12 @@ export default function JornadaBanner({
                 />
               </View>
               {activeCode ? (
-                <Button mode="contained" onPress={copy} compact textClassName="text-sm text-onPrimary dark:text-onPrimary-dark">
-                  {t('common.copy')}
-                </Button>
+                <>
+                  <IconButton icon="content-copy" size={20} onPress={copy} accessibilityLabel={t('common.copy')} />
+                  <Button mode="contained" icon="share-variant" onPress={share} compact textClassName="text-sm text-onPrimary dark:text-onPrimary-dark">
+                    {t('ownerCode.share')}
+                  </Button>
+                </>
               ) : (
                 <Button
                   mode="contained"
@@ -176,8 +198,11 @@ export default function JornadaBanner({
               <Text className="mb-2 text-sm text-onSurface dark:text-onSurface-dark">
                 {t('ownerCode.infoMonth')}
               </Text>
-              <Text className="text-sm text-onSurface dark:text-onSurface-dark">
+              <Text className="mb-2 text-sm text-onSurface dark:text-onSurface-dark">
                 {t('ownerCode.infoDay')}
+              </Text>
+              <Text className="text-sm text-onSurface dark:text-onSurface-dark">
+                {t('ownerCode.infoTeam')}
               </Text>
             </Dialog.Content>
             <Dialog.Actions>

@@ -17,6 +17,7 @@ import { useDriverJornada } from '../hooks/useDriverJornada';
 import RutasPlanner from '../components/RutasPlanner';
 import JornadaBanner from '../components/JornadaBanner';
 import SelectedUserBanner from '../components/SelectedUserBanner';
+import TeamInvitationsCard from '../components/TeamInvitationsCard';
 
 export default function MyRutasScreen({ navigation }) {
   const { t } = useTranslation();
@@ -86,6 +87,7 @@ export default function MyRutasScreen({ navigation }) {
           <ActivityIndicator className="mt-10" />
         ) : needsJoin ? (
           <View className="flex-1 items-center justify-center px-6">
+            <TeamInvitationsCard className="self-stretch mb-6" onChanged={jornada.reload} />
             <IconButton icon="account-arrow-right-outline" size={40} disabled className="opacity-40" />
             <Text className="text-center opacity-60 text-onSurface dark:text-onSurface-dark">
               {t('driver.noOwners')}
@@ -101,7 +103,7 @@ export default function MyRutasScreen({ navigation }) {
               key={jornada.selectedOwnerId}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
-              filterRuta={(ruta) => ruta.owner_id === jornada.selectedOwnerId && ruta.driver_id === user.id}
+              filterRuta={(ruta) => ruta.owner_id === jornada.selectedOwnerId && (ruta.driver_id === user.id || ruta.driver_id == null)}
               createExtra={{ owner_id: jornada.selectedOwnerId }}
               canDelete={(ruta) => ruta.created_by === user.id && ruta.driver_id === user.id}
               editFieldSet={() => 'driverUpdate'}

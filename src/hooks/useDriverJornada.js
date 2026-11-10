@@ -19,8 +19,9 @@ function isActiveJornadaEntry(entry) {
   return code.month === currentMonth();
 }
 
-// Active owner codes (current month or today's day code) the driver has joined,
-// plus the join flow for an 8-character code.
+// Owners the driver works for: team links (permanent) plus active owner codes
+// (current month or today's day code), and the join flow for an 8-character
+// code (owner code or team invitation code).
 export function useDriverJornada({ enabled = true } = {}) {
   const { t } = useTranslation();
   const { refreshUser } = useAuth();
@@ -42,8 +43,23 @@ export function useDriverJornada({ enabled = true } = {}) {
     }
     setLoading(true);
     try {
-      const resp = await api.get('/driver/my-codes');
-      const active = resp.data.filter(isActiveJornadaEntry);
+      const [codesResp, ownersResp] = await Promise.all([
+        api.get('/driver/my-codes'),
+        api.get('/me/owners').catch(() => ({ data: [] })),
+      ]);
+      // Propietarios del equipo (vínculo permanente) + códigos vigentes (mes o
+      // día). Se normalizan a la misma forma y se quita el duplicado por
+      // propietario, dando prioridad al vínculo de equipo.
+      const teamEntries = (ownersResp.data || []).map((l) => ({
+        id: `team-${l.id}`,
+        team: true,
+        owner_month_code: { owner_id: l.owner_id, owner: l.owner, type: 'team' },
+      }));
+      const teamOwnerIds = new Set(teamEntries.map((e) => e.owner_month_code.owner_id));
+      const codeEntries = codesResp.data
+        .filter(isActiveJornadaEntry)
+        .filter((e) => !teamOwnerIds.has(e.owner_month_code.owner_id));
+      const active = [...teamEntries, ...codeEntries];
       setEntries(active);
       setSelectedOwnerId((prev) => {
         if (prev && active.some((e) => e.owner_month_code.owner_id === prev)) return prev;

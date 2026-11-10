@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, Button } from './ui';
 import { getPaymentMethod } from '../utils/paymentMethods';
 import PaymentMethodBadge from './ui/PaymentMethodBadge';
+import PersonAvatar from './ui/PersonAvatar';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { getDriverPermissions } from '../utils/rutas';
@@ -64,6 +65,19 @@ export default function AutoCompleteReviewModal({
               <Text numberOfLines={1} className="text-xs opacity-70 text-onSurface dark:text-onSurface-dark">
                 {r.origin} → {r.destination}
               </Text>
+              {r.owner_id !== user?.id && r.driver_id == null && (
+                <Text numberOfLines={1} className="text-xs text-primary dark:text-primary-dark">
+                  {t('team.unassignedForDriver')}
+                </Text>
+              )}
+              {r.owner_id === user?.id && (
+                <View className="flex-row items-center mt-0.5">
+                  {!!r.driver && <PersonAvatar person={r.driver} size={18} />}
+                  <Text numberOfLines={1} className={`text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark${r.driver ? ' ml-1.5' : ''}`}>
+                    {r.driver ? [r.driver.first_name, r.driver.last_name].filter(Boolean).join(' ') : t('team.noDriver')}
+                  </Text>
+                </View>
+              )}
               <View className="flex-row items-center gap-1.5 mt-0.5">
                 <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
                   {t('review.autoCompleted')}

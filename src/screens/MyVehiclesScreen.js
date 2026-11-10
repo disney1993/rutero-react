@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
-import { IconButton, FAB, PageContainer, Icon } from '../components/ui';
+import { IconButton, FAB, PageContainer, Icon, SegmentedButtons } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
@@ -15,8 +15,11 @@ import VehicleListItem from '../components/VehicleListItem';
 import { sortVehiclesDefaultFirst, vehicleDeleteBlockReason } from '../utils/vehicles';
 import { useSwipeHint } from '../utils/swipeHint';
 import SelectedUserBanner from '../components/SelectedUserBanner';
+import TeamManager from '../components/TeamManager';
 
-export default function MyVehiclesScreen() {
+// Flota del propietario con dos pestañas: vehículos y conductores (equipo).
+// El administrador, que gestiona la flota de otro usuario, solo ve vehículos.
+export default function MyVehiclesScreen({ route }) {
   const { t } = useTranslation();
   const confirm = useConfirm();
   const { resolvedScheme } = useThemeMode();
@@ -24,6 +27,12 @@ export default function MyVehiclesScreen() {
   const { user, isAdmin, refreshUser } = useAuth();
   const { selectedUser } = useSelectedUser();
   const targetUser = isAdmin ? selectedUser : user;
+  const [segment, setSegment] = useState(route?.params?.tab === 'drivers' ? 'drivers' : 'vehicles');
+
+  // Al llegar desde Perfil → Mi equipo se abre directamente la pestaña Conductores.
+  useEffect(() => {
+    if (route?.params?.tab) setSegment(route.params.tab === 'drivers' ? 'drivers' : 'vehicles');
+  }, [route?.params?.tab]);
 
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -122,7 +131,20 @@ export default function MyVehiclesScreen() {
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
       {isAdmin && <SelectedUserBanner />}
-      {loading ? (
+      {!isAdmin && (
+        <SegmentedButtons
+          value={segment}
+          onValueChange={setSegment}
+          buttons={[
+            { value: 'vehicles', label: t('fleet.vehicles'), icon: 'car-outline' },
+            { value: 'drivers', label: t('fleet.drivers'), icon: 'account-group-outline' },
+          ]}
+          className="mx-3 mt-2"
+        />
+      )}
+      {segment === 'drivers' && !isAdmin ? (
+        <TeamManager />
+      ) : loading ? (
         <ActivityIndicator className="mt-10" />
       ) : (
         <PageContainer className="flex-1">
@@ -162,7 +184,9 @@ export default function MyVehiclesScreen() {
         </PageContainer>
       )}
 
-      <FAB icon="plus" label={t('vehicleForm.newTitle')} onPress={openCreate} />
+      {(segment === 'vehicles' || isAdmin) && (
+        <FAB icon="plus" label={t('vehicleForm.newTitle')} onPress={openCreate} />
+      )}
 
       <VehicleFormModal
         visible={formVisible}

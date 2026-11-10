@@ -104,7 +104,7 @@ export default function RutasCalendarScreen({ navigation }) {
       });
       const rows = resp.data.data || [];
       const filtered = driverMode
-        ? rows.filter((r) => r.owner_id === jornada.selectedOwnerId && r.driver_id === user.id && r.trip_date)
+        ? rows.filter((r) => r.owner_id === jornada.selectedOwnerId && (r.driver_id === user.id || r.driver_id == null) && r.trip_date)
         : rows.filter((r) => r.owner_id === targetUser.id && r.trip_date);
       setRutas(filtered);
     } catch (err) {

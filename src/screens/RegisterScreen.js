@@ -8,6 +8,7 @@ import { getInitials, getRandomAvatarColor } from '../utils/avatar';
 import { isValidName, isValidEmail, isValidPassword } from '../utils/validators';
 import { useAuth } from '../context/AuthContext';
 import { toastError } from '../utils/toast';
+import PendingInviteBanner from '../components/PendingInviteBanner';
 
 function validate({ firstName, lastName, secondLastName, email, password }) {
   const errors = {};
@@ -95,6 +96,7 @@ export default function RegisterScreen({ navigation }) {
       >
         <Card className="w-full max-w-[440px]">
           <Card.Content className="py-6">
+            <PendingInviteBanner />
             <Text className="text-2xl font-bold text-center text-onSurface dark:text-onSurface-dark">
               {t('auth.registerTitle')}
             </Text>

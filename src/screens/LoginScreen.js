@@ -9,6 +9,7 @@ import { api, errorMessage } from '../utils/apiClient';
 import { isValidEmail } from '../utils/validators';
 import { useAuth } from '../context/AuthContext';
 import { toastError } from '../utils/toast';
+import PendingInviteBanner from '../components/PendingInviteBanner';
 
 const GOOGLE_IOS_CLIENT_ID = Constants.expoConfig?.extra?.googleIosClientId || '';
 const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || '';
@@ -92,6 +93,7 @@ export default function LoginScreen({ navigation }) {
       >
         <Card className="w-full max-w-[440px]">
           <Card.Content className="py-6">
+            <PendingInviteBanner />
             <Text className="text-2xl font-bold text-center text-onSurface dark:text-onSurface-dark">
               {t('auth.appName')}
             </Text>

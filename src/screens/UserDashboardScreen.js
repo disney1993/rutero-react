@@ -8,6 +8,7 @@ import { useSelectedUser } from '../context/SelectedUserContext';
 import AdminUserPicker from '../components/AdminUserPicker';
 import UserStatsDashboard from '../components/UserStatsDashboard';
 import RenderBoundary from '../components/RenderBoundary';
+import TeamInvitationsCard from '../components/TeamInvitationsCard';
 import { resolveWorkMode } from '../utils/capabilities';
 
 // Misma pantalla para ambos roles: un usuario normal ve su propia actividad
@@ -31,6 +32,8 @@ export default function UserDashboardScreen() {
             {role === 'driver' ? t('stats.driverDashboardTitle') : t('stats.ownerDashboardTitle')}
           </Text>
         )}
+
+        {!isAdmin && <TeamInvitationsCard onChanged={() => setReloadKey((k) => k + 1)} />}
 
         {isAdmin && <AdminUserPicker onRefresh={() => setReloadKey((k) => k + 1)} />}
 

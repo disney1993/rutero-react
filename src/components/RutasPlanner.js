@@ -24,6 +24,9 @@ import RutaFormModal from './RutaFormModal';
 import MonthCalendarPicker from './MonthCalendarPicker';
 import AutoCompleteNotice from './AutoCompleteNotice';
 import AutoCompleteReviewModal from './AutoCompleteReviewModal';
+import PersonAvatar from './ui/PersonAvatar';
+import DriverAvatarPicker from './DriverAvatarPicker';
+import { useTeam } from '../hooks/useTeam';
 import { autoCompleteEnabled, formatEta, isEtaSoon } from '../utils/autoComplete';
 
 // Cada cuánto se refresca la jornada abierta para reflejar los cierres
@@ -80,7 +83,7 @@ function rowAvatarPerson(item) {
   return null;
 }
 
-function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, user, canDelete, onEdit, onDelete, onQuickUpdate, onSwiped, peek, onPeekDone, isWide, onRestore }) {
+function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, user, canDelete, onEdit, onDelete, onQuickUpdate, onSwiped, peek, onPeekDone, isWide, onRestore, hasTeam, onPickDriver }) {
   const STATUS_COLORS = useStatusColors();
   const { t } = useTranslation();
   // Viaje eliminado (borrado blando): se ve atenuado y tachado; tocarlo ofrece restaurarlo.
@@ -241,6 +244,32 @@ function RutaRow({ item, prevDate, nextDate, currency, themeColors, vehicles, us
         <Text numberOfLines={1} className="mt-0.5 opacity-70 text-xs text-onSurface dark:text-onSurface-dark">
           {item.origin} → {item.destination}
         </Text>
+        {item.driver_id == null && item.owner_id !== user?.id && !isDeleted && (
+          <Text numberOfLines={1} className="mt-0.5 text-[11px] text-primary dark:text-primary-dark">
+            {t('team.unassignedForDriver')}
+          </Text>
+        )}
+        {item.owner_id === user?.id && !isDeleted && (!!item.driver || hasTeam) && (
+          // Conductor del viaje en forma de avatar; el propietario lo toca para reasignarlo.
+          <Pressable
+            onPress={() => onPickDriver(item)}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={item.driver ? t('team.changeDriverA11y', { name: [item.driver.first_name, item.driver.last_name].filter(Boolean).join(' ') }) : t('team.assignDriver')}
+            className="mt-1 self-start flex-row items-center rounded-full pr-2 active:opacity-70 bg-fill dark:bg-fill-dark"
+          >
+            {item.driver ? (
+              <PersonAvatar person={item.driver} size={22} />
+            ) : (
+              <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderStyle: 'dashed', borderColor: themeColors.onSurfaceVariant, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="account-plus-outline" size={13} color={themeColors.onSurfaceVariant} />
+              </View>
+            )}
+            <Text numberOfLines={1} className="ml-1.5 text-[11px] text-onSurface dark:text-onSurface-dark">
+              {item.driver ? [item.driver.first_name, item.driver.last_name].filter(Boolean).join(' ') : t('team.assignDriver')}
+            </Text>
+          </Pressable>
+        )}
         {showWillComplete && (
           <Text numberOfLines={1} className="mt-0.5 opacity-60 text-[11px] text-onSurface dark:text-onSurface-dark">
             {t('planner.willComplete', { time: formatEta(item.auto_complete_eta, item.trip_date) })}
@@ -325,6 +354,9 @@ export default function RutasPlanner({
   const navigation = useNavigation();
   const [reviewRutas, setReviewRutas] = useState([]);
   const [reviewVisible, setReviewVisible] = useState(false);
+  // Equipo del propietario para asignar conductor desde la tarjeta del viaje.
+  const team = useTeam({ enabled: vehicles.length > 0 && !user?.is_admin });
+  const [driverPickRuta, setDriverPickRuta] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState(null);
   const [notice, setNotice] = useState(null);
   const [introVisible, setIntroVisible] = useState(false);
@@ -610,6 +642,8 @@ export default function RutasPlanner({
       onPeekDone={() => setPeekId(null)}
       isWide={isWide}
       onRestore={confirmRestore}
+      hasTeam={team.active.length > 0}
+      onPickDriver={setDriverPickRuta}
     />
   );
 
@@ -729,6 +763,28 @@ export default function RutasPlanner({
         selectedDate={selectedDate}
         fetchParams={fetchParams}
       />
+
+      <Dialog visible={!!driverPickRuta} onDismiss={() => setDriverPickRuta(null)}>
+        <Dialog.Title>{t('team.driver')}</Dialog.Title>
+        <Dialog.Content>
+          {!!driverPickRuta && (
+            <DriverAvatarPicker
+              owner={user}
+              team={team.active}
+              value={driverPickRuta.driver_id}
+              extra={driverPickRuta.driver}
+              onChange={(driverId) => {
+                const ruta = driverPickRuta;
+                setDriverPickRuta(null);
+                if ((ruta.driver_id ?? null) !== driverId) quickUpdate(ruta, { driver_id: driverId });
+              }}
+            />
+          )}
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button mode="text" onPress={() => setDriverPickRuta(null)}>{t('common.cancel')}</Button>
+        </Dialog.Actions>
+      </Dialog>
 
       <AutoCompleteReviewModal
         visible={reviewVisible}
