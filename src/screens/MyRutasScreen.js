@@ -139,7 +139,8 @@ export default function MyRutasScreen({ navigation }) {
         />
       )}
       <RutasPlanner
-        key={`${targetUser.id}-${plannerVersion}`}
+        // Cambiar de jornada recarga la lista (el filtro se aplica al cargar).
+        key={`${targetUser.id}-${plannerVersion}-${jornadaSel.selected}`}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         fetchParams={isAdmin ? { user_id: targetUser.id } : {}}

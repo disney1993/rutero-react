@@ -105,6 +105,14 @@ export default function AccountScreen({ navigation }) {
           )}
           {showTeam && (
             <MenuRow
+              icon="file-document-outline"
+              label={t('billing.title')}
+              hint={t('billing.menuHint')}
+              onPress={() => navigation.navigate('SettingsBilling')}
+            />
+          )}
+          {showTeam && (
+            <MenuRow
               icon="account-group-outline"
               label={t('team.title')}
               hint={t('team.menuHint')}

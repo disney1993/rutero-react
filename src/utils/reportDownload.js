@@ -90,6 +90,31 @@ export async function downloadUserReport({ period, date, format, userId, role })
   return { filename };
 }
 
+/**
+ * Descarga un PDF de la API (p. ej. una factura o su vista previa) y lo
+ * comparte con la hoja nativa (WhatsApp, correo, guardar en archivos...). En
+ * web se descarga directamente.
+ */
+export async function downloadAndSharePdf({ url, method = 'get', data, fallbackName = 'documento.pdf' }) {
+  const resp = await api.request({ url, method, data, responseType: 'arraybuffer' });
+  const filename = filenameFromHeaders(resp.headers, 'pdf', 'doc', '') || fallbackName;
+  const bytes = toUint8Array(resp.data);
+
+  if (Platform.OS === 'web') {
+    downloadBlobWeb(bytes, filename, MIME.pdf);
+    return { filename };
+  }
+
+  const file = new File(Paths.cache, filename);
+  file.create({ overwrite: true });
+  file.write(bytes);
+  if (!(await Sharing.isAvailableAsync())) {
+    throw new Error(i18n.t('stats.shareUnavailable'));
+  }
+  await Sharing.shareAsync(file.uri, { mimeType: MIME.pdf, dialogTitle: filename, UTI: 'com.adobe.pdf' });
+  return { filename };
+}
+
 export function reportDownloadError(err, fallback) {
   const data = err?.response?.data;
   if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {

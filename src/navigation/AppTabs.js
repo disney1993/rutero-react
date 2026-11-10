@@ -25,6 +25,7 @@ const loadAdminUserDetailScreen = () => require('../screens/AdminUserDetailScree
 const loadAccountScreen = () => require('../screens/AccountScreen').default;
 const loadRutasCalendarScreen = () => require('../screens/RutasCalendarScreen').default;
 const loadExpensesScreen = () => require('../screens/ExpensesScreen').default;
+const loadBillingSettingsScreen = () => require('../screens/BillingSettingsScreen').default;
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -177,6 +178,7 @@ function AccountStack() {
         options={{ title: t('settings.linkApp') }}
       />
       <Stack.Screen name="AccountCalendar" getComponent={loadRutasCalendarScreen} options={{ title: t('nav.rutasCalendar') }} />
+      <Stack.Screen name="SettingsBilling" getComponent={loadBillingSettingsScreen} options={{ title: t('billing.title') }} />
     </Stack.Navigator>
   );
 }

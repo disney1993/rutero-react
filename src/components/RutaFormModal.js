@@ -6,6 +6,10 @@ import VehicleSelect from './ui/VehicleSelect';
 import FieldLabel from './ui/FieldLabel';
 import DriverAvatarPicker from './DriverAvatarPicker';
 import PersonAvatar from './ui/PersonAvatar';
+import InvoiceModal from './InvoiceModal';
+import { useNavigation } from '@react-navigation/native';
+import { downloadAndSharePdf, reportDownloadError } from '../utils/reportDownload';
+import { toastError } from '../utils/toast';
 import { useTeam } from '../hooks/useTeam';
 import { useStatusColors, statusLabel, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
 import { PHONE_REGEX } from '../utils/validators';
@@ -111,6 +115,36 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
   const showDriverSelect = fieldSet === 'full' && vehicles.length > 0 && !isAdmin
     && (!isEditing || initialValues?.owner_id === user?.id);
   const team = useTeam({ enabled: visible && showDriverSelect });
+
+  // Factura: solo el propietario, en viajes completados (no eliminados).
+  const navigation = useNavigation();
+  const canInvoice = isEditing && fieldSet === 'full' && !isAdmin && initialValues?.owner_id === user?.id
+    && initialValues?.status === 'completed' && !initialValues?.deleted_at;
+  const [invoiceInfo, setInvoiceInfo] = useState({ loading: false, ready: false, invoice: null });
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [sharingInvoice, setSharingInvoice] = useState(false);
+  useEffect(() => {
+    if (!visible || !canInvoice) return undefined;
+    let cancelled = false;
+    setInvoiceInfo({ loading: true, ready: false, invoice: null });
+    Promise.all([api.get('/billing-profile'), api.get(`/rutas/${initialValues.id}/invoice`)])
+      .then(([p, inv]) => { if (!cancelled) setInvoiceInfo({ loading: false, ready: !!p.data.ready, invoice: inv.data.invoice }); })
+      .catch(() => { if (!cancelled) setInvoiceInfo({ loading: false, ready: false, invoice: null }); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, canInvoice, initialValues?.id]);
+
+  const shareInvoice = async () => {
+    setSharingInvoice(true);
+    try {
+      const inv = invoiceInfo.invoice;
+      await downloadAndSharePdf({ url: `/invoices/${inv.id}/pdf`, fallbackName: `factura-${inv.full_number}.pdf` });
+    } catch (e) {
+      toastError(reportDownloadError(e, t('billing.pdfError')));
+    } finally {
+      setSharingInvoice(false);
+    }
+  };
   // Si el usuario ya eligió conductor, el predeterminado no lo pisa al llegar el equipo.
   const driverTouchedRef = useRef(false);
 
@@ -343,7 +377,8 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
   );
 
   return (
-    <Dialog visible={visible} onDismiss={onDismiss} contentStyle={{ maxWidth: 480, maxHeight: '90%' }} contentClassName="p-0">
+    <>
+    <Dialog visible={visible && !invoiceOpen} onDismiss={onDismiss} contentStyle={{ maxWidth: 480, maxHeight: '90%' }} contentClassName="p-0">
       <ScrollView contentContainerStyle={{ padding: 14 }} keyboardShouldPersistTaps="handled">
         <View className="flex-row items-center justify-between gap-2 mb-2">
           <Text className="font-bold text-lg flex-shrink text-onSurface dark:text-onSurface-dark">
@@ -600,6 +635,38 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
           </Pressable>
         )}
 
+        {canInvoice && (
+          <View className="mt-2 rounded-xl px-3 py-2 border border-border dark:border-border-dark">
+            <Text className="text-xs font-semibold mb-1 text-onSurface dark:text-onSurface-dark">{t('invoice.section')}</Text>
+            {invoiceInfo.loading ? (
+              <Text className="text-xs opacity-60 text-onSurface dark:text-onSurface-dark">{t('common.loading')}</Text>
+            ) : invoiceInfo.invoice ? (
+              <View className="flex-row items-center">
+                <Text className="flex-1 text-sm text-onSurface dark:text-onSurface-dark">
+                  {t('invoice.existing', { number: invoiceInfo.invoice.full_number })}
+                </Text>
+                <Button mode="outlined" compact icon="share-variant" loading={sharingInvoice} onPress={shareInvoice}>{t('billing.share')}</Button>
+              </View>
+            ) : (
+              <View>
+                <Button mode="outlined" icon="file-document-outline" disabled={!invoiceInfo.ready} onPress={() => setInvoiceOpen(true)}>
+                  {t('invoice.create')}
+                </Button>
+                {!invoiceInfo.ready && (
+                  <Pressable
+                    onPress={() => { onDismiss(); navigation.navigate('Account', { screen: 'SettingsBilling', initial: false }); }}
+                    className="mt-1"
+                  >
+                    <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+                      {t('invoice.needProfile')} <Text className="font-semibold text-primary dark:text-primary-dark">{t('invoice.completeProfile')}</Text>
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
         <Button
           mode="contained"
           onPress={handleSubmit}
@@ -612,5 +679,12 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
         <Button mode="text" onPress={onDismiss} className="mt-0.5">{t('common.cancel')}</Button>
       </ScrollView>
     </Dialog>
+    <InvoiceModal
+      visible={visible && invoiceOpen}
+      ruta={canInvoice ? { ...initialValues, final_price: form.final_price || initialValues.final_price } : null}
+      onDismiss={() => setInvoiceOpen(false)}
+      onIssued={(invoice) => { setInvoiceInfo((i) => ({ ...i, invoice })); setInvoiceOpen(false); }}
+    />
+    </>
   );
 }

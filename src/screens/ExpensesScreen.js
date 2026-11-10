@@ -9,7 +9,6 @@ import PersonAvatar from '../components/ui/PersonAvatar';
 import RenderBoundary from '../components/RenderBoundary';
 import ExpenseFormModal from '../components/ExpenseFormModal';
 import { useAuth } from '../context/AuthContext';
-import { useConfirm } from '../context/ConfirmContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { api, errorMessage } from '../utils/apiClient';
@@ -33,7 +32,6 @@ function Donut(props) {
 export default function ExpensesScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const confirm = useConfirm();
   const { resolvedScheme } = useThemeMode();
   const c = colors[resolvedScheme];
   const { categories, byKey } = useExpenseCategories();
@@ -113,14 +111,8 @@ export default function ExpensesScreen() {
     }
   };
 
+  // La confirmación se pide dentro del formulario (InlineConfirm).
   const remove = async (expense) => {
-    const ok = await confirm({
-      title: t('expenses.deleteTitle'),
-      message: t('expenses.deleteConfirm', { amount: formatCurrency(expense.amount, currency) }),
-      confirmLabel: t('common.delete'),
-      destructive: true,
-    });
-    if (!ok) return;
     try {
       await api.delete(`/expenses/${expense.id}`);
       setFormVisible(false);

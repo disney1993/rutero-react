@@ -6,6 +6,8 @@ import FieldLabel from './ui/FieldLabel';
 import VehicleSelect from './ui/VehicleSelect';
 import DatePickerField from './DatePickerField';
 import DriverAvatarPicker from './DriverAvatarPicker';
+import InlineConfirm from './ui/InlineConfirm';
+import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../hooks/useTeam';
 import { categoryColor, EXPENSE_PAYMENT_METHODS, parseAmount } from '../utils/expenses';
@@ -44,11 +46,13 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
   const team = useTeam({ enabled: visible });
   const [form, setForm] = useState(empty);
   const [submitted, setSubmitted] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isEditing = !!initialValues;
 
   useEffect(() => {
     if (!visible) return;
     setSubmitted(false);
+    setConfirmingDelete(false);
     if (initialValues) {
       setForm({
         ...empty,
@@ -120,28 +124,24 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
         </View>
         {submitted && !!errors.category && <Text className="text-xs mb-2 text-error dark:text-error-dark">{errors.category}</Text>}
 
-        <View className="flex-row gap-2 mt-2">
-          <View className="flex-1">
-            <Input
-              label={t('expenses.amount')}
-              required
-              value={form.amount}
-              onChangeText={set('amount')}
-              keyboardType="decimal-pad"
-              placeholder="0,00"
-              right="currency-eur"
-              error={submitted ? errors.amount : undefined}
-            />
-          </View>
-          <View className="flex-1">
-            <DatePickerField
-              label={t('expenses.date')}
-              required
-              value={form.date}
-              onChange={set('date')}
-              error={submitted ? errors.date : undefined}
-            />
-          </View>
+        <View className="mt-2">
+          <Input
+            label={t('expenses.amount')}
+            required
+            value={form.amount}
+            onChangeText={set('amount')}
+            keyboardType="decimal-pad"
+            placeholder="0,00"
+            right="currency-eur"
+            error={submitted ? errors.amount : undefined}
+          />
+          <DatePickerField
+            label={t('expenses.date')}
+            required
+            value={form.date}
+            onChange={set('date')}
+            error={submitted ? errors.date : undefined}
+          />
         </View>
 
         <Input
@@ -212,16 +212,28 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
         />
         <Input label={t('expenses.notes')} value={form.notes} onChangeText={set('notes')} multiline maxLength={1000} />
 
-        <View className="flex-row items-center mt-4">
-          {isEditing && (
-            <Button mode="text" icon="delete-outline" onPress={() => onDelete(initialValues)} textClassName="text-error dark:text-error-dark">
-              {t('common.delete')}
-            </Button>
-          )}
-          <View className="flex-1" />
-          <Button mode="text" onPress={onDismiss}>{t('common.cancel')}</Button>
-          <Button mode="contained" loading={submitting} disabled={submitting} onPress={submit}>{t('common.save')}</Button>
-        </View>
+        {confirmingDelete ? (
+          <InlineConfirm
+            className="mt-4"
+            destructive
+            title={t('expenses.deleteTitle')}
+            message={t('expenses.deleteConfirm', { amount: formatCurrency(initialValues?.amount) })}
+            confirmLabel={t('common.delete')}
+            onConfirm={() => onDelete(initialValues)}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        ) : (
+          <View className="flex-row items-center mt-4">
+            {isEditing && (
+              <Button mode="text" icon="delete-outline" onPress={() => setConfirmingDelete(true)} textClassName="text-error dark:text-error-dark">
+                {t('common.delete')}
+              </Button>
+            )}
+            <View className="flex-1" />
+            <Button mode="text" onPress={onDismiss}>{t('common.cancel')}</Button>
+            <Button mode="contained" loading={submitting} disabled={submitting} onPress={submit}>{t('common.save')}</Button>
+          </View>
+        )}
       </ScrollView>
     </Dialog>
   );

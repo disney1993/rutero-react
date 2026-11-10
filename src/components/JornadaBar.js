@@ -8,7 +8,7 @@ import VehicleSelect from './ui/VehicleSelect';
 import FieldLabel from './ui/FieldLabel';
 import DriverAvatarPicker from './DriverAvatarPicker';
 import { useAuth } from '../context/AuthContext';
-import { useConfirm } from '../context/ConfirmContext';
+import InlineConfirm from './ui/InlineConfirm';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { useTeam } from '../hooks/useTeam';
@@ -57,7 +57,6 @@ function Chip({ selected, onPress, children, accessibilityLabel }) {
 export default function JornadaBar({ date, vehicles = [], jornadasApi, selected, onSelect, onChanged }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const confirm = useConfirm();
   const { resolvedScheme } = useThemeMode();
   const c = colors[resolvedScheme];
   const { jornadas } = jornadasApi;
@@ -161,9 +160,11 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
             <Text className="text-[11px] text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
               {t('jornadas.codeOf', { label: current?.label || t('jornadas.first') })}
             </Text>
-            <Text selectable className="text-base font-bold tracking-[2px] text-onSurface dark:text-onSurface-dark">
-              {current?.code || '········'}
-            </Text>
+            {current?.code ? (
+              <Text selectable className="text-base font-bold tracking-[2px] text-onSurface dark:text-onSurface-dark">{current.code}</Text>
+            ) : (
+              <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('jornadas.codeOnUse')}</Text>
+            )}
           </View>
           <IconButton icon="content-copy" size={20} onPress={copy} disabled={busy} accessibilityLabel={t('common.copy')} />
           <Button mode="contained" icon="share-variant" compact onPress={share} disabled={busy} textClassName="text-sm text-onPrimary dark:text-onPrimary-dark">
@@ -189,8 +190,6 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
           }
         }}
         onRegenerate={async () => {
-          const ok = await confirm({ title: t('jornadas.newCode'), message: t('jornadas.newCodeConfirm'), confirmLabel: t('jornadas.newCode') });
-          if (!ok) return;
           try {
             const updated = await jornadasApi.regenerateCode(settingsFor.id);
             setSettingsFor(updated);
@@ -199,8 +198,6 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
           }
         }}
         onDelete={async () => {
-          const ok = await confirm({ title: t('jornadas.delete'), message: t('jornadas.deleteConfirm', { label: settingsFor.label }), confirmLabel: t('common.delete'), destructive: true });
-          if (!ok) return;
           try {
             await jornadasApi.remove(settingsFor.id);
             setSettingsFor(null);
@@ -220,9 +217,12 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
   const [driverId, setDriverId] = useState(null);
   const [vehicleId, setVehicleId] = useState(null);
   const [saving, setSaving] = useState(false);
+  // Confirmaciones dentro del diálogo: 'code' (nuevo código) o 'delete'.
+  const [pending, setPending] = useState(null);
 
   useEffect(() => {
     if (!jornada) return;
+    setPending(null);
     setLabel(jornada.label || '');
     setDriverId(jornada.driver_id ?? null);
     setVehicleId(jornada.vehicle_id ?? null);
@@ -253,15 +253,28 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
           <Text className="flex-1 text-sm text-onSurface dark:text-onSurface-dark">
             {t('jornadas.code')}: <Text className="font-bold tracking-[2px]">{jornada.code}</Text>
           </Text>
-          <Button mode="text" compact icon="refresh" onPress={onRegenerate}>{t('jornadas.newCode')}</Button>
+          <Button mode="text" compact icon="refresh" onPress={() => setPending('code')}>{t('jornadas.newCode')}</Button>
         </View>
+        {!!pending && (
+          <InlineConfirm
+            className="mt-2"
+            destructive={pending === 'delete'}
+            title={pending === 'delete' ? t('jornadas.delete') : t('jornadas.newCode')}
+            message={pending === 'delete' ? t('jornadas.deleteConfirm', { label: jornada.label }) : t('jornadas.newCodeConfirm')}
+            confirmLabel={pending === 'delete' ? t('common.delete') : t('jornadas.newCode')}
+            onConfirm={async () => { const action = pending; setPending(null); await (action === 'delete' ? onDelete() : onRegenerate()); }}
+            onCancel={() => setPending(null)}
+          />
+        )}
       </Dialog.Content>
-      <Dialog.Actions>
-        <Button mode="text" onPress={onDelete} textClassName="text-error dark:text-error-dark">{t('common.delete')}</Button>
-        <View className="flex-1" />
-        <Button mode="text" onPress={onDismiss}>{t('common.cancel')}</Button>
-        <Button mode="contained" loading={saving} onPress={save}>{t('common.save')}</Button>
-      </Dialog.Actions>
+      {!pending && (
+        <Dialog.Actions>
+          <Button mode="text" onPress={() => setPending('delete')} textClassName="text-error dark:text-error-dark">{t('common.delete')}</Button>
+          <View className="flex-1" />
+          <Button mode="text" onPress={onDismiss}>{t('common.cancel')}</Button>
+          <Button mode="contained" loading={saving} onPress={save}>{t('common.save')}</Button>
+        </Dialog.Actions>
+      )}
     </Dialog>
   );
 }
