@@ -24,6 +24,8 @@ import { toastError, toastSuccess } from '../utils/toast';
 import { haptics } from '../utils/haptics';
 import RutaFormModal from '../components/RutaFormModal';
 import JornadaBanner from '../components/JornadaBanner';
+import JornadaBar from '../components/JornadaBar';
+import { useJornadas, useJornadaSelection } from '../hooks/useJornadas';
 import SelectedUserBanner from '../components/SelectedUserBanner';
 
 const DEFAULT_DURATION_MIN = 60;
@@ -46,16 +48,18 @@ function visibleRange(date, mode) {
 // Cada viaje como evento del calendario: empieza a su hora y dura lo que su
 // trayecto estimado (mínimo 30 min para que se pueda tocar). Los viajes sin
 // hora van a la franja de "todo el día" (00:00 → 00:00 del día siguiente).
-function toEvent(ruta) {
+// withDriver: el propietario ve el conductor de cada viaje ("Ana · Cliente").
+function toEvent(ruta, withDriver = false) {
   const [y, m, d] = ruta.trip_date.slice(0, 10).split('-').map(Number);
+  const title = withDriver && ruta.driver?.first_name ? `${ruta.driver.first_name} · ${ruta.client_name}` : ruta.client_name;
   if (!ruta.trip_time) {
     const start = new Date(y, m - 1, d);
-    return { ruta, title: ruta.client_name, start, end: dayjs(start).add(1, 'day').toDate() };
+    return { ruta, title, start, end: dayjs(start).add(1, 'day').toDate() };
   }
   const [h, min] = ruta.trip_time.split(':').map(Number);
   const start = new Date(y, m - 1, d, h, min);
   const duration = Math.max(MIN_DURATION_MIN, ruta.estimated_duration_min || DEFAULT_DURATION_MIN);
-  return { ruta, title: ruta.client_name, start, end: dayjs(start).add(duration, 'minute').toDate() };
+  return { ruta, title, start, end: dayjs(start).add(duration, 'minute').toDate() };
 }
 
 // Calendario de viajes con vista de día (por defecto), semana y mes. La
@@ -87,6 +91,14 @@ export default function RutasCalendarScreen({ navigation }) {
   const [editingRuta, setEditingRuta] = useState(null);
   const [newDefaults, setNewDefaults] = useState({ date: toISODate(new Date()), time: null });
   const [submitting, setSubmitting] = useState(false);
+
+  // Jornadas del día (propietario, vista de día): filtran los viajes y los
+  // nuevos se crean en la elegida, con su conductor y su vehículo.
+  const ownerView = !isAdmin && !driverMode;
+  const dayISO = toISODate(date);
+  const jornadasApi = useJornadas({ date: dayISO, enabled: ownerView && mode === 'day' && vehicles.length > 0 });
+  const jornadaSel = useJornadaSelection(jornadasApi, dayISO);
+  const showJornadas = ownerView && mode === 'day' && vehicles.length > 0;
 
   const userParams = isAdmin && targetUser ? { user_id: targetUser.id } : {};
   const [from, to] = visibleRange(date, mode);
@@ -130,7 +142,12 @@ export default function RutasCalendarScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, targetUser?.id, driverMode]));
 
-  const events = useMemo(() => (needsJoin ? [] : rutas.map(toEvent)), [rutas, needsJoin]);
+  const events = useMemo(() => {
+    if (needsJoin) return [];
+    const list = showJornadas ? rutas.filter(jornadaSel.includes) : rutas;
+    return list.map((r) => toEvent(r, !driverMode));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rutas, needsJoin, showJornadas, jornadaSel.selected, jornadasApi.jornadas, driverMode]);
   // La franja "todo el día" ocupa otra fila de hora entera bajo la cabecera;
   // solo hace falta si hay algún viaje antiguo sin hora.
   const hasAllDayEvents = useMemo(() => events.some((e) => !e.ruta.trip_time), [events]);
@@ -178,12 +195,12 @@ export default function RutasCalendarScreen({ navigation }) {
     try {
       const extra = driverMode
         ? { owner_id: jornada.selectedOwnerId }
-        : (isAdmin ? { owner_id: targetUser.id } : {});
+        : (isAdmin ? { owner_id: targetUser.id } : (showJornadas ? jornadaSel.createExtra : {}));
       if (editingRuta) {
         await api.put(`/rutas/${editingRuta.id}`, payload);
         toastSuccess(t('planner.updated'));
       } else {
-        await api.post('/rutas', { ...payload, ...extra });
+        await api.post('/rutas', { ...extra, ...payload });
         toastSuccess(t('planner.created'));
       }
       setFormVisible(false);
@@ -230,7 +247,6 @@ export default function RutasCalendarScreen({ navigation }) {
 
       {!isAdmin && (
         <JornadaBanner
-          showOwner={!driverMode && (ownerCapable || (vehiclesLoaded && vehicles.length > 0))}
           showDriver={driverMode}
           selectedDate={toISODate(date)}
           codeInput={jornada.codeInput}
@@ -239,6 +255,17 @@ export default function RutasCalendarScreen({ navigation }) {
           joining={jornada.joining}
           codeError={jornada.codeError}
           joinMessage={jornada.joinMessage}
+        />
+      )}
+
+      {showJornadas && (
+        <JornadaBar
+          date={dayISO}
+          vehicles={vehicles}
+          jornadasApi={jornadasApi}
+          selected={jornadaSel.selected}
+          onSelect={jornadaSel.setSelected}
+          onChanged={loadRutas}
         />
       )}
 
@@ -354,6 +381,7 @@ export default function RutasCalendarScreen({ navigation }) {
         initialValues={editingRuta}
         defaultDate={newDefaults.date}
         defaultTime={newDefaults.time}
+        defaults={!editingRuta && showJornadas ? jornadaSel.formDefaults : null}
         fieldSet={driverMode && editingRuta ? 'driverUpdate' : 'full'}
         vehicles={vehicles}
         submitting={submitting}

@@ -29,7 +29,7 @@ function fullName(owner) {
 
 /** "16/11/2026" para un día o "11/2026" para un mes (jornadas). */
 export function invitePeriod(info) {
-  if (info?.type === 'day' && info.valid_on) {
+  if ((info?.type === 'day' || info?.type === 'jornada') && info.valid_on) {
     const [y, m, d] = info.valid_on.slice(0, 10).split('-');
     return `${d}/${m}/${y}`;
   }

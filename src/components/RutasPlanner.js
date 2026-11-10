@@ -306,6 +306,8 @@ export default function RutasPlanner({
   fetchParams = {},
   filterRuta = () => true,
   createExtra = {},
+  // Conductor y vehículo propuestos al crear (p. ej. los de la jornada elegida).
+  formDefaults = null,
   canEdit = () => true,
   canDelete = () => true,
   editFieldSet = () => 'full',
@@ -565,7 +567,8 @@ export default function RutasPlanner({
         await api.put(`/rutas/${editingRuta.id}`, payload);
         toastSuccess(t('planner.updated'));
       } else {
-        await api.post('/rutas', { ...payload, ...createExtra });
+        // Lo elegido en el formulario (p. ej. la jornada) manda sobre los extra de la pantalla.
+        await api.post('/rutas', { ...createExtra, ...payload });
         toastSuccess(t('planner.created'));
       }
       setFormVisible(false);
@@ -751,6 +754,7 @@ export default function RutasPlanner({
         onSubmit={handleSubmit}
         initialValues={editingRuta}
         defaultDate={selectedDate}
+        defaults={formDefaults}
         fieldSet={editingRuta ? editFieldSet(editingRuta) : 'full'}
         vehicles={vehicles}
         submitting={submitting}

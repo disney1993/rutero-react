@@ -646,10 +646,31 @@
     "bannerTitle_month": "{{name}} invited you to their working days for {{period}}",
     "confirmMessage_team": "{{name}} invites you to drive in their team. You'll see the trips they assign you. Do you want to join?",
     "confirmMessage_day": "{{name}} invites you to their working day on {{period}}. You'll become part of their team and see the trips they assign you. Do you want to join?",
-    "confirmMessage_month": "{{name}} invites you to their working days for {{period}}. You'll become part of their team and see the trips they assign you. Do you want to join?"
+    "confirmMessage_month": "{{name}} invites you to their working days for {{period}}. You'll become part of their team and see the trips they assign you. Do you want to join?",
+    "bannerTitle_jornada": "{{name}} invited you to their shift on {{period}}",
+    "confirmMessage_jornada": "{{name}} invites you to their shift on {{period}}. You'll become part of their team and, if the shift has no driver, its driver. Do you want to join?"
   },
   "fleet": {
     "vehicles": "Vehicles",
     "drivers": "Drivers"
+  },
+  "jornadas": {
+    "all": "All",
+    "first": "Shift 1",
+    "add": "New shift",
+    "created": "{{label}} created: choose its driver and vehicle",
+    "codeOf": "{{label}} code",
+    "settings": "Shift settings",
+    "settingsTitle": "Shift on {{date}}",
+    "label": "Name",
+    "labelRequired": "Give the shift a name",
+    "code": "Code",
+    "driverHint": "Pending trips in this shift will move to the driver you choose. If you leave it unassigned, whoever joins with the shift code will become its driver.",
+    "newCode": "New code",
+    "newCodeConfirm": "The current code and its link will stop working. Use it if you shared it by mistake.",
+    "delete": "Delete shift",
+    "deleteConfirm": "Delete {{label}}? Only possible if it has no trips.",
+    "shareMessage": "Hi, I'm {{name}}. I'm sharing my shift \"{{label}}\" on {{date}} on Rutero. Tap this link on your phone:\n{{link}}\n\nWhen you join you'll be this shift's driver and part of my team. If you have no account yet, sign up when the app opens. If the link doesn't open the app, type the code {{code}} in \"Have an invitation code?\" (Home).",
+    "jornada": "Shift"
   }
 }

@@ -646,10 +646,31 @@
     "bannerTitle_month": "{{name}} te ha invitado a sus jornadas de {{period}}",
     "confirmMessage_team": "{{name}} te invita a conducir en su equipo. Verás los viajes que te asigne. ¿Quieres unirte?",
     "confirmMessage_day": "{{name}} te invita a su jornada del {{period}}. Pasarás a formar parte de su equipo y verás los viajes que te asigne. ¿Quieres unirte?",
-    "confirmMessage_month": "{{name}} te invita a sus jornadas de {{period}}. Pasarás a formar parte de su equipo y verás los viajes que te asigne. ¿Quieres unirte?"
+    "confirmMessage_month": "{{name}} te invita a sus jornadas de {{period}}. Pasarás a formar parte de su equipo y verás los viajes que te asigne. ¿Quieres unirte?",
+    "bannerTitle_jornada": "{{name}} te ha invitado a su jornada del {{period}}",
+    "confirmMessage_jornada": "{{name}} te invita a su jornada del {{period}}. Pasarás a formar parte de su equipo y, si la jornada no tiene conductor, serás su conductor. ¿Quieres unirte?"
   },
   "fleet": {
     "vehicles": "Vehículos",
     "drivers": "Conductores"
+  },
+  "jornadas": {
+    "all": "Todas",
+    "first": "Jornada 1",
+    "add": "Nueva jornada",
+    "created": "{{label}} creada: elige su conductor y vehículo",
+    "codeOf": "Código de {{label}}",
+    "settings": "Ajustes de la jornada",
+    "settingsTitle": "Jornada del {{date}}",
+    "label": "Nombre",
+    "labelRequired": "Pon un nombre a la jornada",
+    "code": "Código",
+    "driverHint": "Los viajes pendientes de esta jornada pasarán al conductor que elijas. Si eliges un conductor sin asignar, quien se una con el código de la jornada será su conductor.",
+    "newCode": "Nuevo código",
+    "newCodeConfirm": "El código actual y su enlace dejarán de funcionar. Úsalo si lo compartiste por error.",
+    "delete": "Eliminar jornada",
+    "deleteConfirm": "¿Eliminar {{label}}? Solo se puede si no tiene viajes.",
+    "shareMessage": "Hola, soy {{name}}. Te comparto mi jornada «{{label}}» del {{date}} en Rutero. Pulsa este enlace desde el móvil:\n{{link}}\n\nAl unirte serás el conductor de esta jornada y formarás parte de mi equipo. Si aún no tienes cuenta, regístrate al abrir la app. Si el enlace no abre la app, escribe el código {{code}} en «¿Tienes un código de invitación?» (Inicio).",
+    "jornada": "Jornada"
   }
 }

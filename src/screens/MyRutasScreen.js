@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,8 @@ import RutasPlanner from '../components/RutasPlanner';
 import JornadaBanner from '../components/JornadaBanner';
 import SelectedUserBanner from '../components/SelectedUserBanner';
 import TeamInvitationsCard from '../components/TeamInvitationsCard';
+import JornadaBar from '../components/JornadaBar';
+import { useJornadas, useJornadaSelection } from '../hooks/useJornadas';
 
 export default function MyRutasScreen({ navigation }) {
   const { t } = useTranslation();
@@ -36,6 +38,13 @@ export default function MyRutasScreen({ navigation }) {
   const [selectedDate, setSelectedDate] = useState(() => todayISO());
   const [vehicles, setVehicles] = useState([]);
   const [loaded, setLoaded] = useState(false);
+
+  // Jornadas del día (solo propietario). Con varias, se ven "Todas" por
+  // defecto; con una (o ninguna, la Jornada 1 virtual), esa.
+  const showJornadas = !isAdmin && !driverMode && (ownerCapable || (loaded && vehicles.length > 0));
+  const jornadasApi = useJornadas({ date: selectedDate, enabled: showJornadas });
+  const jornadaSel = useJornadaSelection(jornadasApi, selectedDate);
+  const [plannerVersion, setPlannerVersion] = useState(0);
 
   useFocusEffect(useCallback(() => {
     if (!targetUser || driverMode) {
@@ -119,19 +128,24 @@ export default function MyRutasScreen({ navigation }) {
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
       {isAdmin && <SelectedUserBanner />}
-      {!isAdmin && (
-        <JornadaBanner
-          showOwner={ownerCapable || (loaded && vehicles.length > 0)}
-          selectedDate={selectedDate}
+      {showJornadas && (
+        <JornadaBar
+          date={selectedDate}
+          vehicles={vehicles}
+          jornadasApi={jornadasApi}
+          selected={jornadaSel.selected}
+          onSelect={jornadaSel.setSelected}
+          onChanged={() => setPlannerVersion((v) => v + 1)}
         />
       )}
       <RutasPlanner
-        key={targetUser.id}
+        key={`${targetUser.id}-${plannerVersion}`}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         fetchParams={isAdmin ? { user_id: targetUser.id } : {}}
-        filterRuta={(ruta) => ruta.owner_id === targetUser.id}
-        createExtra={isAdmin ? { owner_id: targetUser.id } : {}}
+        filterRuta={(ruta) => ruta.owner_id === targetUser.id && jornadaSel.includes(ruta)}
+        createExtra={isAdmin ? { owner_id: targetUser.id } : jornadaSel.createExtra}
+        formDefaults={jornadaSel.formDefaults}
         vehicles={vehicles}
         emptyMessage={t('rutas.emptyDayCreate')}
         createBlocked={!isAdmin && loaded && vehicles.length === 0}

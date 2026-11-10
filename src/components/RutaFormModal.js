@@ -5,6 +5,7 @@ import PaymentMethodField from './ui/PaymentMethodField';
 import VehicleSelect from './ui/VehicleSelect';
 import FieldLabel from './ui/FieldLabel';
 import DriverAvatarPicker from './DriverAvatarPicker';
+import PersonAvatar from './ui/PersonAvatar';
 import { useTeam } from '../hooks/useTeam';
 import { useStatusColors, statusLabel, TIME_REGEX, todayISO, roundUpToNext15Minutes } from '../utils/rutas';
 import { PHONE_REGEX } from '../utils/validators';
@@ -57,6 +58,8 @@ const emptyForm = {
   vehicle_id: null,
   // Conductor del equipo al que se asigna el viaje (null = lo hace el propietario).
   driver_id: null,
+  // Jornada del día a la que pertenece (null = la primera del día).
+  jornada_id: null,
 };
 
 function validate(form, fieldSet, vehicles) {
@@ -92,7 +95,7 @@ function validate(form, fieldSet, vehicles) {
 
 // fieldSet 'full': create or owner/admin edit. 'driverUpdate': driver editing
 // a ruta they did not create (final_price, payment_method, notes; status via swipe).
-export default function RutaFormModal({ visible, onDismiss, onSubmit, initialValues, defaultDate, defaultTime, fieldSet = 'full', vehicles = [], submitting }) {
+export default function RutaFormModal({ visible, onDismiss, onSubmit, initialValues, defaultDate, defaultTime, defaults = null, fieldSet = 'full', vehicles = [], submitting }) {
   const STATUS_COLORS = useStatusColors();
   const { t } = useTranslation();
   const { user, isAdmin } = useAuth();
@@ -110,6 +113,40 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
   const team = useTeam({ enabled: visible && showDriverSelect });
   // Si el usuario ya eligió conductor, el predeterminado no lo pisa al llegar el equipo.
   const driverTouchedRef = useRef(false);
+
+  // Jornadas del día del viaje, para moverlo entre ellas (solo propietario).
+  const [dayJornadas, setDayJornadas] = useState([]);
+  useEffect(() => {
+    if (!visible || !showDriverSelect || !form.trip_date) {
+      setDayJornadas([]);
+      return undefined;
+    }
+    let cancelled = false;
+    api.get('/jornadas', { params: { date: form.trip_date } })
+      .then((resp) => {
+        if (cancelled) return;
+        const list = resp.data || [];
+        setDayJornadas(list);
+        // Si cambia la fecha, la jornada anterior ya no vale: la primera del nuevo día.
+        setForm((f) => (f.jornada_id && !list.some((j) => j.id === f.jornada_id) ? { ...f, jornada_id: null } : f));
+      })
+      .catch(() => { if (!cancelled) setDayJornadas([]); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, showDriverSelect, form.trip_date]);
+
+  const effectiveJornadaId = form.jornada_id ?? dayJornadas[0]?.id ?? null;
+  // Elegir jornada: el viaje toma su conductor y su vehículo (si sigue pendiente).
+  const changeJornada = (j) => {
+    driverTouchedRef.current = true;
+    setForm((f) => ({
+      ...f,
+      jornada_id: j.id,
+      ...(f.status === 'pending' || !isEditing
+        ? { driver_id: j.driver_id ?? null, vehicle_id: j.vehicle_id || f.vehicle_id }
+        : {}),
+    }));
+  };
 
   useEffect(() => {
     if (visible) {
@@ -145,8 +182,12 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
           price_per_km: user?.price_per_km
             ? String(user.price_per_km)
             : (user?.currency || 'EUR') === 'EUR' ? String(DEFAULT_PRICE_PER_KM) : '',
-          vehicle_id: defaultVehicle ? defaultVehicle.id : null,
+          vehicle_id: defaults?.vehicle_id || (defaultVehicle ? defaultVehicle.id : null),
+          // La jornada elegida manda sobre el conductor predeterminado del equipo.
+          driver_id: defaults ? (defaults.driver_id ?? null) : null,
+          jornada_id: defaults?.jornada_id ?? null,
         });
+        if (defaults) driverTouchedRef.current = true;
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -266,7 +307,10 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
         price_per_km: form.price_per_km ? Number(form.price_per_km) : null,
         vehicle_id: form.vehicle_id,
       });
-      if (showDriverSelect) payload.driver_id = form.driver_id || null;
+      if (showDriverSelect) {
+        payload.driver_id = form.driver_id || null;
+        payload.jornada_id = form.jornada_id || null;
+      }
     }
 
     onSubmit(payload);
@@ -468,6 +512,31 @@ export default function RutaFormModal({ visible, onDismiss, onSubmit, initialVal
                 />
               </View>
             </View>
+
+            {showDriverSelect && dayJornadas.length > 1 && (
+              <View className="mb-2">
+                <FieldLabel>{t('jornadas.jornada')}</FieldLabel>
+                <View className="flex-row flex-wrap gap-2">
+                  {dayJornadas.map((j) => {
+                    const sel = j.id === effectiveJornadaId;
+                    return (
+                      <Pressable
+                        key={j.id}
+                        onPress={() => changeJornada(j)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: sel }}
+                        className={sel
+                          ? 'flex-row items-center rounded-full pl-1 pr-3 py-1 border bg-primary/15 border-primary dark:bg-primary-dark/25 dark:border-primary-dark'
+                          : 'flex-row items-center rounded-full pl-1 pr-3 py-1 border bg-surface border-border dark:bg-surface-dark dark:border-border-dark'}
+                      >
+                        <PersonAvatar person={j.driver || user} size={22} />
+                        <Text className="ml-1.5 text-xs font-medium text-onSurface dark:text-onSurface-dark">{j.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             {showDriverSelect && (team.active.length > 0 || !!form.driver_id) && (
               <View className="mb-2">
