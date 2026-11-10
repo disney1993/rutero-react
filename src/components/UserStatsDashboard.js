@@ -19,6 +19,7 @@ import { colors } from '../theme';
 import { todayISO, useStatusColors } from '../utils/rutas';
 import { formatCurrency } from '../utils/currency';
 import { haptics } from '../utils/haptics';
+import { categoryColor, useExpenseCategories } from '../utils/expenses';
 
 // Lazy: gifted-charts must not evaluate with AppTabs/Home module graph.
 let CachedBarChart;
@@ -142,6 +143,13 @@ export default function UserStatsDashboard({ userId, role, reloadKey = 0 }) {
   const counters = data?.counters || EMPTY_COUNTERS;
   const previous = data?.previous_counters || EMPTY_COUNTERS;
   const charts = data?.charts || {};
+  const expensesByCategory = data?.expenses_by_category || [];
+  const { byKey: expenseCategories } = useExpenseCategories();
+  const netDelta = useMemo(
+    () => formatDelta(counters.delta_net ?? 0, previous.net ?? 0, { asCurrency: true, isDiff: true }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [counters.delta_net, previous.net],
+  );
 
   const tripsDelta = useMemo(
     () => formatDelta(counters.delta_trips, previous.trips_total, { isDiff: true }),
@@ -331,6 +339,40 @@ export default function UserStatsDashboard({ userId, role, reloadKey = 0 }) {
               color={deltaAccent(revenueDelta.tone, themeColors)}
             />
           </View>
+
+          {/* Gastos y beneficio (los gastos se registran en la pestaña Gastos) */}
+          <View className="flex-row gap-1.5 mb-3">
+            <StatTile compact label={t('stats.expenses')} value={formatCurrency(counters.expenses ?? 0)} />
+            <StatTile
+              compact
+              label={t('stats.net')}
+              value={formatCurrency(counters.net ?? 0)}
+              color={(counters.net ?? 0) < 0 ? themeColors.error : themeColors.secondary}
+            />
+            <StatTile compact label={t('stats.vsPrevious')} value={netDelta.text} color={deltaAccent(netDelta.tone, themeColors)} />
+          </View>
+          {expensesByCategory.length > 0 && (
+            <Card className="mb-3">
+              <Card.Content>
+                <Text className="font-medium mb-2 text-onSurface dark:text-onSurface-dark">{t('stats.expensesByCategory')}</Text>
+                {expensesByCategory.map((row, i) => {
+                  const pct = counters.expenses > 0 ? row.total / counters.expenses : 0;
+                  const color = categoryColor(row.category, i);
+                  return (
+                    <View key={row.category} className="mb-1.5">
+                      <View className="flex-row justify-between">
+                        <Text className="text-xs text-onSurface dark:text-onSurface-dark">{expenseCategories[row.category]?.label || row.category}</Text>
+                        <Text className="text-xs font-semibold text-onSurface dark:text-onSurface-dark">{formatCurrency(row.total)}</Text>
+                      </View>
+                      <View className="h-1.5 rounded-full mt-0.5 bg-fill dark:bg-fill-dark">
+                        <View style={{ width: `${Math.max(2, pct * 100)}%`, backgroundColor: color }} className="h-1.5 rounded-full" />
+                      </View>
+                    </View>
+                  );
+                })}
+              </Card.Content>
+            </Card>
+          )}
 
           {showDailyChart && chartHasSignal(dailyData) && (
             <RenderBoundary

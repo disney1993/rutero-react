@@ -34,7 +34,8 @@
     "profile": "My Profile",
     "settings": "Settings",
     "logout": "Log Out",
-    "user": "User"
+    "user": "User",
+    "expenses": "Expenses"
   },
   "auth": {
     "appName": "Rutero",
@@ -334,7 +335,10 @@
     "driverScopeHint": "Only trips from day or month codes you joined",
     "sectionTrips": "Trips",
     "sectionRevenue": "Revenue",
-    "sectionReports": "Reports"
+    "sectionReports": "Reports",
+    "expenses": "Expenses",
+    "net": "Profit",
+    "expensesByCategory": "Expenses by category"
   },
   "roles": {
     "owner": "Owner",
@@ -672,5 +676,49 @@
     "deleteConfirm": "Delete {{label}}? Only possible if it has no trips.",
     "shareMessage": "Hi, I'm {{name}}. I'm sharing my shift \"{{label}}\" on {{date}} on Rutero. Tap this link on your phone:\n{{link}}\n\nWhen you join you'll be this shift's driver and part of my team. If you have no account yet, sign up when the app opens. If the link doesn't open the app, type the code {{code}} in \"Have an invitation code?\" (Home).",
     "jornada": "Shift"
+  },
+  "expenses": {
+    "newTitle": "New expense",
+    "editTitle": "Edit expense",
+    "category": "Category",
+    "amount": "Amount (VAT included)",
+    "date": "Date",
+    "description": "Description (optional)",
+    "descriptionRequired": "Description",
+    "descriptionPlaceholder": "E.g. oil change, October payroll…",
+    "vehicle": "Vehicle",
+    "vehicleNone": "No specific vehicle",
+    "paymentMethod": "Payment method",
+    "vat": "Input VAT (optional)",
+    "vatPlaceholder": "For information only",
+    "notes": "Notes",
+    "noTeam": "You have no drivers in your team yet (Fleet → Drivers).",
+    "monthTotal": "Expenses this month",
+    "empty": "No expenses this month. Tap + to record payroll, fuel, workshop, fines…",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "created": "Expense recorded",
+    "updated": "Expense updated",
+    "deleted": "Expense deleted",
+    "loadError": "Could not load expenses",
+    "saveError": "Could not save the expense",
+    "deleteTitle": "Delete expense",
+    "deleteConfirm": "Delete this {{amount}} expense?",
+    "payment": {
+      "efectivo": "Cash",
+      "tarjeta": "Card",
+      "bizum": "Bizum",
+      "transferencia": "Bank transfer",
+      "domiciliacion": "Direct debit"
+    },
+    "errors": {
+      "category": "Choose a category",
+      "amount": "Enter a valid amount (e.g. 45.90)",
+      "amountMax": "The amount is too high",
+      "vatTooHigh": "VAT cannot exceed the amount",
+      "date": "Choose the date",
+      "description": "Describe the expense",
+      "driver": "Choose the payroll driver"
+    }
   }
 }

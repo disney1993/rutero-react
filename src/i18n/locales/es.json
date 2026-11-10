@@ -34,7 +34,8 @@
     "profile": "Mi perfil",
     "settings": "Ajustes",
     "logout": "Cerrar sesión",
-    "user": "Usuario"
+    "user": "Usuario",
+    "expenses": "Gastos"
   },
   "auth": {
     "appName": "Rutero",
@@ -334,7 +335,10 @@
     "driverScopeHint": "Solo viajes de códigos de día o de mes a los que te uniste",
     "sectionTrips": "Viajes",
     "sectionRevenue": "Ingresos",
-    "sectionReports": "Reportes"
+    "sectionReports": "Reportes",
+    "expenses": "Gastos",
+    "net": "Beneficio",
+    "expensesByCategory": "Gastos por categoría"
   },
   "roles": {
     "owner": "Propietario",
@@ -672,5 +676,49 @@
     "deleteConfirm": "¿Eliminar {{label}}? Solo se puede si no tiene viajes.",
     "shareMessage": "Hola, soy {{name}}. Te comparto mi jornada «{{label}}» del {{date}} en Rutero. Pulsa este enlace desde el móvil:\n{{link}}\n\nAl unirte serás el conductor de esta jornada y formarás parte de mi equipo. Si aún no tienes cuenta, regístrate al abrir la app. Si el enlace no abre la app, escribe el código {{code}} en «¿Tienes un código de invitación?» (Inicio).",
     "jornada": "Jornada"
+  },
+  "expenses": {
+    "newTitle": "Nuevo gasto",
+    "editTitle": "Editar gasto",
+    "category": "Categoría",
+    "amount": "Importe (IVA incluido)",
+    "date": "Fecha",
+    "description": "Descripción (opcional)",
+    "descriptionRequired": "Descripción",
+    "descriptionPlaceholder": "Ej.: cambio de aceite, nómina de octubre…",
+    "vehicle": "Vehículo",
+    "vehicleNone": "Sin vehículo concreto",
+    "paymentMethod": "Forma de pago",
+    "vat": "IVA soportado (opcional)",
+    "vatPlaceholder": "Solo informativo",
+    "notes": "Notas",
+    "noTeam": "Aún no tienes conductores en tu equipo (Flota → Conductores).",
+    "monthTotal": "Gastos del mes",
+    "empty": "No hay gastos este mes. Pulsa + para registrar nóminas, combustible, taller, multas…",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "created": "Gasto registrado",
+    "updated": "Gasto actualizado",
+    "deleted": "Gasto eliminado",
+    "loadError": "No se pudieron cargar los gastos",
+    "saveError": "No se pudo guardar el gasto",
+    "deleteTitle": "Eliminar gasto",
+    "deleteConfirm": "¿Eliminar este gasto de {{amount}}?",
+    "payment": {
+      "efectivo": "Efectivo",
+      "tarjeta": "Tarjeta",
+      "bizum": "Bizum",
+      "transferencia": "Transferencia",
+      "domiciliacion": "Domiciliación"
+    },
+    "errors": {
+      "category": "Elige una categoría",
+      "amount": "Escribe un importe válido (p. ej. 45,90)",
+      "amountMax": "El importe es demasiado alto",
+      "vatTooHigh": "El IVA no puede ser mayor que el importe",
+      "date": "Elige la fecha",
+      "description": "Describe el gasto",
+      "driver": "Elige el conductor de la nómina"
+    }
   }
 }

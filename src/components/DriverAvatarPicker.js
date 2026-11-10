@@ -17,7 +17,7 @@ const SIZE = 48;
  * `extra` permite mostrar a un conductor que ya no está en el equipo pero
  * tiene el viaje asignado.
  */
-export default function DriverAvatarPicker({ owner, team = [], value, onChange, extra }) {
+export default function DriverAvatarPicker({ owner, team = [], value, onChange, extra, includeOwner = true, showDefault = true }) {
   const { t } = useTranslation();
   const { resolvedScheme } = useThemeMode();
   const c = colors[resolvedScheme];
@@ -25,8 +25,8 @@ export default function DriverAvatarPicker({ owner, team = [], value, onChange, 
   // Predeterminado: el conductor marcado con estrella o, si no hay, "Yo".
   const hasDefault = team.some((l) => l.is_default);
   const options = [
-    { id: null, person: owner, label: t('team.me'), isDefault: !hasDefault },
-    ...team.map((link) => ({ id: link.driver.id, person: link.driver, label: teamMemberName(link), isDefault: !!link.is_default })),
+    ...(includeOwner ? [{ id: null, person: owner, label: t('team.me'), isDefault: showDefault && !hasDefault }] : []),
+    ...team.map((link) => ({ id: link.driver.id, person: link.driver, label: teamMemberName(link), isDefault: showDefault && !!link.is_default })),
   ];
   if (extra && !options.some((o) => o.id === extra.id)) {
     options.push({ id: extra.id, person: extra, label: [extra.first_name, extra.last_name].filter(Boolean).join(' ') });

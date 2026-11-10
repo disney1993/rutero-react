@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
-import { canManageVehicles, resolveWorkMode } from '../utils/capabilities';
+import { canManageVehicles, isOwnerCapable, resolveWorkMode } from '../utils/capabilities';
 import InstaTabBar from './InstaTabBar';
 import ModeIndicator from '../components/ModeIndicator';
 import RenderBoundary from '../components/RenderBoundary';
@@ -24,6 +24,7 @@ const loadAdminDashboardScreen = () => require('../screens/AdminDashboardScreen'
 const loadAdminUserDetailScreen = () => require('../screens/AdminUserDetailScreen').default;
 const loadAccountScreen = () => require('../screens/AccountScreen').default;
 const loadRutasCalendarScreen = () => require('../screens/RutasCalendarScreen').default;
+const loadExpensesScreen = () => require('../screens/ExpensesScreen').default;
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -124,6 +125,16 @@ function VehiclesStack() {
   );
 }
 
+function ExpensesStack() {
+  const { t } = useTranslation();
+  const stackOptions = useStackOptions();
+  return (
+    <Stack.Navigator screenOptions={stackOptions}>
+      <Stack.Screen name="ExpensesHome" getComponent={loadExpensesScreen} options={{ title: t('nav.expenses') }} />
+    </Stack.Navigator>
+  );
+}
+
 function AdminStack() {
   const { t } = useTranslation();
   const stackOptions = useStackOptions();
@@ -191,6 +202,11 @@ export default function AppTabs() {
     onLongPressNavigate: (navigation) => navigation.navigate('Account', { screen: 'SettingsApp', initial: false }),
   });
 
+  // Gastos: solo el propietario con flota, en modo propietario (no el admin).
+  const expensesTab = !isAdmin && workMode === 'owner' && isOwnerCapable(user, isAdmin)
+    ? tab('Expenses', ExpensesStack, t('nav.expenses'), 'receipt-text-outline', 'receipt-text')
+    : null;
+
   const vehiclesTab = showVehiclesTab
     ? tab('MyVehicles', VehiclesStack, t('nav.myVehicles'), 'car-outline', 'car')
     : null;
@@ -219,6 +235,7 @@ export default function AppTabs() {
             tab('MyRutas', RutasStack, t('nav.myRutas'), 'map-outline', 'map'),
             tab('RutasCalendar', CalendarStack, t('nav.rutasCalendar'), 'calendar-blank-outline', 'calendar-blank'),
             vehiclesTab,
+            expensesTab,
             accountTab,
           ].filter(Boolean)}
     </Tab.Navigator>
