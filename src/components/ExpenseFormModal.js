@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dialog, Input, Button, Icon } from './ui';
 import FieldLabel from './ui/FieldLabel';
@@ -16,6 +16,10 @@ import { todayISO } from '../utils/rutas';
 const empty = {
   date: '', category: '', description: '', amount: '', vat_amount: '',
   vehicle_id: null, driver_id: null, payment_method: '', notes: '',
+  // Deducible: por defecto, el de la categoría (las multas no lo son).
+  deductible: true,
+  // Plantilla de gasto mensual: el servidor crea una copia cada mes.
+  recurring_monthly: false,
 };
 
 function validate(form, category, t) {
@@ -66,6 +70,8 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
         vat_amount: initialValues.vat_amount != null ? String(initialValues.vat_amount).replace('.', ',') : '',
         payment_method: initialValues.payment_method || '',
         notes: initialValues.notes || '',
+        deductible: initialValues.deductible !== false,
+        recurring_monthly: !!initialValues.recurring_monthly,
       });
     } else {
       const defaultVehicle = vehicles.find((v) => v.is_default) || vehicles[0];
@@ -75,7 +81,14 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
   }, [visible, initialValues]);
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+  // Al cambiar de categoría se propone su valor de "deducible".
+  const setCategory = (key) => setForm((f) => ({
+    ...f,
+    category: key,
+    deductible: categories.find((c) => c.key === key)?.deductible !== false,
+  }));
   const category = categories.find((c) => c.key === form.category);
+  const isGeneratedCopy = !!initialValues?.recurring_parent_id;
   const links = category?.links || [];
   const errors = validate(form, category, t);
   const isValid = Object.keys(errors).length === 0;
@@ -93,6 +106,8 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
       driver_id: links.includes('driver') ? form.driver_id : null,
       payment_method: form.payment_method || null,
       notes: form.notes.trim() || null,
+      deductible: !!form.deductible,
+      ...(isGeneratedCopy ? {} : { recurring_monthly: !!form.recurring_monthly }),
     });
   };
 
@@ -111,7 +126,7 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
             return (
               <Pressable
                 key={c.key}
-                onPress={() => set('category')(c.key)}
+                onPress={() => setCategory(c.key)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
                 style={selected ? { backgroundColor: `${color}22`, borderColor: color } : undefined}
@@ -214,6 +229,25 @@ export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelet
           error={submitted ? errors.vat_amount : undefined}
         />
         <Input label={t('expenses.notes')} value={form.notes} onChangeText={set('notes')} multiline maxLength={1000} />
+
+        <View className="flex-row items-center justify-between mt-2">
+          <View className="flex-1 pr-3">
+            <Text className="text-sm text-onSurface dark:text-onSurface-dark">{t('expenses.deductible')}</Text>
+            <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('expenses.deductibleHint')}</Text>
+          </View>
+          <Switch value={!!form.deductible} onValueChange={set('deductible')} />
+        </View>
+        {isGeneratedCopy ? (
+          <Text className="mt-2 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('expenses.generatedCopy')}</Text>
+        ) : (
+          <View className="flex-row items-center justify-between mt-2">
+            <View className="flex-1 pr-3">
+              <Text className="text-sm text-onSurface dark:text-onSurface-dark">{t('expenses.recurring')}</Text>
+              <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('expenses.recurringHint')}</Text>
+            </View>
+            <Switch value={!!form.recurring_monthly} onValueChange={set('recurring_monthly')} />
+          </View>
+        )}
 
         {confirmingDelete ? (
           <InlineConfirm

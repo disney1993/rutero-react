@@ -590,7 +590,7 @@
     "intro": "Drivers in your team see the trips you assign them without any codes. They only join if they accept your invitation, and either of you can end the link.",
     "inviteTitle": "Invite a driver",
     "emailLabel": "Driver's email",
-    "emailHint": "Your email app will open with the message already written. They will see the invitation when they sign in to Rutero with that email, even if they have no account yet.",
+    "emailHint": "They will receive an email with the steps (if the server has email configured; otherwise your email app opens with the message written). They will see the invitation when they sign in to Rutero with that email, even without an account yet.",
     "invitationSent": "Invitation registered",
     "codeCopied": "Code copied",
     "codeExpires": "Invitation code · expires on {{date}}",
@@ -637,7 +637,8 @@
     "unsetDefault": "Remove as default",
     "defaultSet": "{{name}} is now your default driver",
     "defaultUnset": "No default driver: new trips will be yours",
-    "defaultHint": "Tap the star to choose the default driver: it will be suggested when creating trips, like the default vehicle. If none is marked, \"Me\" is suggested."
+    "defaultHint": "Tap the star to choose the default driver: it will be suggested when creating trips, like the default vehicle. If none is marked, \"Me\" is suggested.",
+    "invitationEmailed": "Invitation emailed to {{email}}"
   },
   "invite": {
     "bannerText": "Sign in or create your account and you'll join as a driver.",
@@ -720,7 +721,14 @@
       "date": "Choose the date",
       "description": "Describe the expense",
       "driver": "Choose the payroll driver"
-    }
+    },
+    "deductible": "Deductible expense",
+    "deductibleHint": "Fines and penalties are not deductible. Used to separate the deductible total in reports.",
+    "recurring": "Repeat every month",
+    "recurringHint": "It will be created automatically on the same day each month (payroll, insurance, self-employed fee). Turn it off to stop it.",
+    "generatedCopy": "Created automatically from a monthly expense. To change the next ones, edit the original expense.",
+    "deductibleTotal": "Deductible: {{amount}}",
+    "notDeductible": "Not deductible"
   },
   "billing": {
     "title": "Billing details",
@@ -782,7 +790,18 @@
       "iban": "Invalid IBAN: check the check digits",
       "review": "Check the highlighted fields"
     },
-    "examplePrefix": "E.g. {{value}}"
+    "examplePrefix": "E.g. {{value}}",
+    "logo": "Invoice logo",
+    "logoHint": "PNG or JPG. Resized on the phone (max 300 KB) and stored in your billing profile.",
+    "logoAdd": "Add logo",
+    "logoChange": "Change logo",
+    "logoRemove": "Remove logo",
+    "logoSaved": "Logo saved",
+    "logoRemoved": "Logo removed",
+    "logoTooLarge": "The image is still too large. Try a lighter one.",
+    "logoError": "Could not save the logo",
+    "yearlySeries": "Automatic yearly series",
+    "yearlySeriesHint": "If the series starts with the year (e.g. 2026-), issuing the first invoice of a new year switches it and restarts at 1."
   },
   "invoice": {
     "section": "Invoice",

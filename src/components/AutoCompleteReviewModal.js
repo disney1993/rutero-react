@@ -16,13 +16,12 @@ function shortDate(iso) {
   return `${day}/${month}`;
 }
 
-// TODO(rutero): para un conductor, "Todo correcto" asigna a su nombre todos
-//   los viajes sin asignar de la lista, aunque algunos los hiciera otro
-//   compañero de la jornada (ver el TODO de RutaController::review). Valorar
-//   ocultar el botón a los conductores o pedir que confirmen uno a uno.
 // Lista de viajes que el cron dio por completados (efectivo) y que nadie ha
 // revisado todavía. Es el único sitio donde se corrige un cierre automático,
 // y está pensado para usarse con el vehículo detenido.
+// "Todo correcto" de un conductor solo incluye viajes ya a su nombre; los
+// sin asignar se confirman uno a uno (Correcto) para no apropiarse de los
+// de un compañero de jornada.
 export default function AutoCompleteReviewModal({
   visible,
   rutas,
@@ -39,6 +38,10 @@ export default function AutoCompleteReviewModal({
   const { resolvedScheme } = useThemeMode();
   const themeColors = colors[resolvedScheme];
   const reviewable = rutas.filter((r) => getDriverPermissions(r, user).canChangeStatusPayment);
+  // Propietario: todos. Conductor: solo los ya asignados a él.
+  const bulkConfirmable = reviewable.filter((r) => (
+    r.owner_id === user?.id || r.driver_id === user?.id
+  ));
 
   return (
     <Dialog visible={visible} onDismiss={onDismiss} contentStyle={{ maxWidth: 520, maxHeight: '90%' }} contentClassName="p-0">
@@ -109,8 +112,8 @@ export default function AutoCompleteReviewModal({
           );
         })}
 
-        {reviewable.length > 1 && (
-          <Button mode="contained" className="mt-4" disabled={!!busyId} onPress={() => onConfirmAll(reviewable)}>
+        {bulkConfirmable.length > 1 && (
+          <Button mode="contained" className="mt-4" disabled={!!busyId} onPress={() => onConfirmAll(bulkConfirmable)}>
             {t('review.allCorrect')}
           </Button>
         )}

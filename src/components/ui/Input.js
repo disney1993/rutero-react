@@ -30,6 +30,8 @@ export default function Input({
 }) {
   const { resolvedScheme } = useThemeMode();
   const placeholderColor = colors[resolvedScheme].onSurfaceVariant;
+  // minWidth: 0 evita que en web el texto tape el icono derecho en campos estrechos.
+  const { style: inputStyle, ...inputRest } = rest;
   return (
     <View style={style} className={cn('mb-1', className)}>
       <FieldLabel required={required}>{label}</FieldLabel>
@@ -39,12 +41,13 @@ export default function Input({
         {!!left && <Icon name={left} size={20} className="mr-2" />}
         <TextInput
           placeholderTextColor={placeholderColor}
-          className={cn('flex-1 py-2 text-onSurface dark:text-onSurface-dark', inputClassName)}
-          {...rest}
+          className={cn('min-w-0 flex-1 py-2 text-onSurface dark:text-onSurface-dark', inputClassName)}
+          style={[{ minWidth: 0, flex: 1 }, inputStyle]}
+          {...inputRest}
         />
         {!!right && (
-          <Pressable onPress={onRightPress} hitSlop={8}>
-            <Icon name={right} size={20} className="ml-2" />
+          <Pressable onPress={onRightPress} hitSlop={8} className="shrink-0 pl-2">
+            <Icon name={right} size={20} />
           </Pressable>
         )}
       </View>

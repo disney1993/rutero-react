@@ -98,10 +98,15 @@ export default function TeamManager() {
     setInviting(true);
     const to = email.trim();
     try {
-      await api.post('/team/invitations', { type: 'email', email: to });
+      const resp = await api.post('/team/invitations', { type: 'email', email: to });
       team.reload();
       setEmail('');
       setEmailTouched(false);
+      // Si el servidor ya ha enviado el correo, no se abre el del móvil.
+      if (resp.data?.email_sent) {
+        toastSuccess(t('team.invitationEmailed', { email: to }));
+        return;
+      }
       const subject = encodeURIComponent(t('team.shareSubject'));
       const body = encodeURIComponent(t('team.emailBody', { name: ownerName, email: to }) + downloadLine);
       try {

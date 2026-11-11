@@ -1,7 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { ScrollView, View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Text, Pressable, ActivityIndicator, Switch, Image } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Card, Button, Input, IconButton, PageContainer, SegmentedButtons, StatusBadge, Dialog, Icon } from '../components/ui';
 import NativeSelect from '../components/ui/NativeSelect';
 import FieldLabel from '../components/ui/FieldLabel';
@@ -15,7 +17,8 @@ import { colors } from '../theme';
 
 const EMPTY = {
   issuer_type: 'autonomo', legal_name: '', tax_id: '', address_line: '', postal_code: '', city: '', province: '',
-  activity: 'passengers', vat_rate: 10, exemption_reason: '', series: '', next_number: 1, licence: '', email: '', phone: '', iban: '',
+  activity: 'passengers', vat_rate: 10, exemption_reason: '', series: '', yearly_series: true, next_number: 1,
+  licence: '', email: '', phone: '', iban: '', logo: null,
 };
 
 function validate(f, t) {
@@ -55,6 +58,7 @@ export default function BillingSettingsScreen() {
   const [busyId, setBusyId] = useState(null);
   const [correcting, setCorrecting] = useState(null);
   const [reason, setReason] = useState('');
+  const [logoBusy, setLogoBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +68,7 @@ export default function BillingSettingsScreen() {
         ...EMPTY,
         ...Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v ?? EMPTY[k]])),
         vat_rate: Number(p.vat_rate ?? 10),
+        yearly_series: p.yearly_series !== false,
       });
       setMeta(profileResp.data);
       setInvoices(invoicesResp.data || []);
@@ -89,7 +94,14 @@ export default function BillingSettingsScreen() {
     }
     setSaving(true);
     try {
-      const payload = { ...form, tax_id: normalizeTaxId(form.tax_id), iban: form.iban.trim() || null, exemption_reason: form.exemption_reason.trim() || null };
+      const { logo, ...rest } = form;
+      const payload = {
+        ...rest,
+        tax_id: normalizeTaxId(form.tax_id),
+        iban: form.iban.trim() || null,
+        exemption_reason: form.exemption_reason.trim() || null,
+        yearly_series: !!form.yearly_series,
+      };
       if (lockedNumbering) delete payload.next_number;
       else payload.next_number = Number(form.next_number) || 1;
       const resp = await api.put('/billing-profile', payload);
@@ -125,6 +137,52 @@ export default function BillingSettingsScreen() {
       load();
     } catch (e) {
       toastError(errorMessage(e, t('alerts.genericError')));
+    }
+  };
+
+  const uploadLogo = async () => {
+    setLogoBusy(true);
+    try {
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (picked.canceled || !picked.assets?.[0]?.uri) return;
+      const resized = await ImageManipulator.manipulateAsync(
+        picked.assets[0].uri,
+        [{ resize: { width: 600 } }],
+        { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      if (!resized.base64) throw new Error('logo');
+      const logo = `data:image/jpeg;base64,${resized.base64}`;
+      if (logo.length > 400000) {
+        toastError(t('billing.logoTooLarge'));
+        return;
+      }
+      const resp = await api.put('/billing-profile/logo', { logo });
+      setMeta(resp.data);
+      setForm((f) => ({ ...f, logo: resp.data.profile?.logo || logo }));
+      toastSuccess(t('billing.logoSaved'));
+    } catch (e) {
+      const validation = e.response?.data?.errors;
+      toastError((validation && Object.values(validation).flat()[0]) || errorMessage(e, t('billing.logoError')));
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    setLogoBusy(true);
+    try {
+      const resp = await api.delete('/billing-profile/logo');
+      setMeta(resp.data);
+      setForm((f) => ({ ...f, logo: null }));
+      toastSuccess(t('billing.logoRemoved'));
+    } catch (e) {
+      toastError(errorMessage(e, t('alerts.genericError')));
+    } finally {
+      setLogoBusy(false);
     }
   };
 
@@ -168,6 +226,28 @@ export default function BillingSettingsScreen() {
               <View className="flex-1"><Input label={t('billing.email')} value={form.email} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" maxLength={120} error={err('email')} /></View>
             </View>
             <Input label={t('billing.iban')} value={form.iban} onChangeText={(v) => set('iban')(v.toUpperCase())} autoCapitalize="characters" maxLength={40} placeholder={t('billing.examplePrefix', { value: 'ES91 2100 0418 4502 0005 1332' })} error={err('iban')} />
+
+            <Text className="font-medium mt-3 mb-1 text-onSurface dark:text-onSurface-dark">{t('billing.logo')}</Text>
+            <Text className="text-xs mb-2 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('billing.logoHint')}</Text>
+            <View className="flex-row items-center gap-3">
+              {form.logo ? (
+                <Image source={{ uri: form.logo }} style={{ width: 96, height: 48, borderRadius: 8 }} resizeMode="contain" />
+              ) : (
+                <View className="h-12 w-24 items-center justify-center rounded-lg border border-dashed border-border dark:border-border-dark">
+                  <Icon name="image-outline" size={20} color={c.onSurfaceVariant} />
+                </View>
+              )}
+              <View className="flex-1">
+                <Button mode="outlined" icon="image-plus" loading={logoBusy} disabled={logoBusy} onPress={uploadLogo}>
+                  {form.logo ? t('billing.logoChange') : t('billing.logoAdd')}
+                </Button>
+                {!!form.logo && (
+                  <Button mode="text" disabled={logoBusy} onPress={removeLogo} className="mt-1">
+                    {t('billing.logoRemove')}
+                  </Button>
+                )}
+              </View>
+            </View>
           </Card.Content>
         </Card>
 
@@ -210,6 +290,13 @@ export default function BillingSettingsScreen() {
             <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
               {lockedNumbering ? t('billing.numberingLocked') : t('billing.numberingHint', { example: `${form.series}${String(form.next_number || 1).padStart(4, '0')}` })}
             </Text>
+            <View className="flex-row items-center justify-between mt-3">
+              <View className="flex-1 pr-3">
+                <Text className="text-sm text-onSurface dark:text-onSurface-dark">{t('billing.yearlySeries')}</Text>
+                <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('billing.yearlySeriesHint')}</Text>
+              </View>
+              <Switch value={!!form.yearly_series} onValueChange={set('yearly_series')} />
+            </View>
           </Card.Content>
         </Card>
 

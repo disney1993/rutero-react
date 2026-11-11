@@ -25,7 +25,15 @@
       "expo-web-browser",
       "expo-font",
       "expo-sharing",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Rutero usa tus fotos solo para el logotipo de tus facturas.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "rutero",
     "userInterfaceStyle": "automatic",

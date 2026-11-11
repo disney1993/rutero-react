@@ -37,11 +37,8 @@ function snapDate(date) {
   return next;
 }
 
-// TODO(rutero): en la versión web, cuando el campo es estrecho (p. ej. a
-//   media anchura en el formulario de ruta), el icono del reloj se pinta
-//   encima de la hora. Reservar el espacio del icono (paddingRight en el
-//   input o icono fuera del texto) y revisar también DatePickerField.
 // Native time picker on iOS/Android (24h, 5-min snap). Web keeps a custom HH:mm wheel.
+// El icono no tapa la hora en web: Input reserva el espacio (minWidth: 0 + shrink-0).
 export default function TimePickerField({ label, value, onChange, error, required, placeholder, className }) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);

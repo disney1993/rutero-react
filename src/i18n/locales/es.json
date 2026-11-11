@@ -590,7 +590,7 @@
     "intro": "Los conductores de tu equipo ven los viajes que les asignas sin necesidad de códigos. Solo entran si aceptan tu invitación, y cualquiera de los dos puede deshacer el vínculo.",
     "inviteTitle": "Invitar a un conductor",
     "emailLabel": "Email del conductor",
-    "emailHint": "Se abrirá tu app de correo con el mensaje ya escrito. La persona verá la invitación al entrar en Rutero con ese email, aunque todavía no tenga cuenta.",
+    "emailHint": "Le llegará un correo con los pasos (si el servidor tiene correo configurado; si no, se abrirá tu app de correo con el mensaje ya escrito). Verá la invitación al entrar en Rutero con ese email, aunque todavía no tenga cuenta.",
     "invitationSent": "Invitación registrada",
     "codeCopied": "Código copiado",
     "codeExpires": "Código de invitación · caduca el {{date}}",
@@ -637,7 +637,8 @@
     "unsetDefault": "Quitar como predeterminado",
     "defaultSet": "{{name}} es ahora tu conductor predeterminado",
     "defaultUnset": "Sin conductor predeterminado: los viajes nuevos serán tuyos",
-    "defaultHint": "Toca la estrella para elegir el conductor predeterminado: se propondrá al crear viajes, como el vehículo predeterminado. Si no marcas ninguno, se propone «Yo»."
+    "defaultHint": "Toca la estrella para elegir el conductor predeterminado: se propondrá al crear viajes, como el vehículo predeterminado. Si no marcas ninguno, se propone «Yo».",
+    "invitationEmailed": "Invitación enviada por email a {{email}}"
   },
   "invite": {
     "bannerText": "Inicia sesión o crea tu cuenta y te unirás como conductor.",
@@ -720,7 +721,14 @@
       "date": "Elige la fecha",
       "description": "Describe el gasto",
       "driver": "Elige el conductor de la nómina"
-    }
+    },
+    "deductible": "Gasto deducible",
+    "deductibleHint": "Las multas y sanciones no son deducibles. Sirve para separar el total deducible en los informes.",
+    "recurring": "Repetir cada mes",
+    "recurringHint": "Se creará solo el mismo día de cada mes (nóminas, seguros, cuota de autónomos). Desactívalo para que deje de repetirse.",
+    "generatedCopy": "Creado automáticamente a partir de un gasto mensual. Para cambiar los siguientes, edita el gasto original.",
+    "deductibleTotal": "Deducibles: {{amount}}",
+    "notDeductible": "No deducible"
   },
   "billing": {
     "title": "Datos de facturación",
@@ -782,7 +790,18 @@
       "iban": "IBAN no válido: revisa los dígitos de control",
       "review": "Revisa los campos marcados"
     },
-    "examplePrefix": "Ej.: {{value}}"
+    "examplePrefix": "Ej.: {{value}}",
+    "logo": "Logotipo en la factura",
+    "logoHint": "PNG o JPG. Se reduce en el móvil (máx. 300 KB) y se guarda en tu perfil de facturación.",
+    "logoAdd": "Añadir logotipo",
+    "logoChange": "Cambiar logotipo",
+    "logoRemove": "Quitar logotipo",
+    "logoSaved": "Logotipo guardado",
+    "logoRemoved": "Logotipo eliminado",
+    "logoTooLarge": "La imagen sigue siendo demasiado grande. Prueba con otra más ligera.",
+    "logoError": "No se pudo guardar el logotipo",
+    "yearlySeries": "Serie anual automática",
+    "yearlySeriesHint": "Si la serie empieza por el año (p. ej. 2026-), al emitir la primera factura de un año nuevo pasa sola a ese año y vuelve a 1."
   },
   "invoice": {
     "section": "Factura",

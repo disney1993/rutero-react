@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Input, Card } from './ui';
 import { api } from '../utils/apiClient';
@@ -7,13 +7,9 @@ import { api } from '../utils/apiClient';
 const DEBOUNCE_MS = 450;
 const MIN_CHARS = 3;
 
-// TODO(rutero): atribución de OpenStreetMap. La licencia ODbL exige mostrar
-//   "© OpenStreetMap contributors" donde se usan sus datos: añadirla bajo la
-//   lista de sugerencias (y en Ajustes → Acerca de). El cambio de Nominatim
-//   a Photon se hace en la API (GeocodingController) sin tocar este
-//   componente.
 // Busca direcciones reales de España vía el backend (que a su vez consulta
-// Nominatim/OSM). Si no se encuentra o no se elige ninguna sugerencia, el
+// Photon y, de respaldo, Nominatim; ambos con datos de OpenStreetMap, cuya
+// licencia ODbL exige la atribución que se muestra bajo las sugerencias). Si no se encuentra o no se elige ninguna sugerencia, el
 // texto se guarda igual como dirección libre — solo que sin coordenadas,
 // por lo que no se podrá calcular la distancia automáticamente para ese
 // tramo (se puede introducir el km a mano).
@@ -93,6 +89,13 @@ export default function AddressAutocompleteInput({ label, value, onChangeText, o
               </Pressable>
             ))
           )}
+          <Text
+            onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright')}
+            accessibilityRole="link"
+            className="px-4 pb-1.5 pt-0.5 text-[10px] text-right text-onSurfaceVariant dark:text-onSurfaceVariant-dark"
+          >
+            © OpenStreetMap contributors
+          </Text>
         </Card>
       )}
     </View>

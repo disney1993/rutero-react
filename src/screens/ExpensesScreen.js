@@ -38,7 +38,7 @@ export default function ExpensesScreen() {
   const currency = user?.currency || 'EUR';
 
   const [month, setMonth] = useState(() => `${todayISO().slice(0, 7)}-01`);
-  const [data, setData] = useState({ data: [], total: 0, by_category: [] });
+  const [data, setData] = useState({ data: [], total: 0, deductible_total: 0, by_category: [] });
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -134,7 +134,10 @@ export default function ExpensesScreen() {
       <Card className="mb-3">
         <Card.Content>
           <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('expenses.monthTotal')}</Text>
-          <Text className="text-2xl font-bold mb-2 text-onSurface dark:text-onSurface-dark">{formatCurrency(data.total, currency)}</Text>
+          <Text className="text-2xl font-bold text-onSurface dark:text-onSurface-dark">{formatCurrency(data.total, currency)}</Text>
+          <Text className="text-xs mb-2 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+            {t('expenses.deductibleTotal', { amount: formatCurrency(data.deductible_total ?? 0, currency) })}
+          </Text>
           {data.by_category.length > 0 && (
             <View className="flex-row items-center">
               <RenderBoundary fallback={null}>
@@ -202,7 +205,15 @@ export default function ExpensesScreen() {
                         <Icon name={cat?.icon || 'cash'} size={18} color={color} />
                       </View>
                       <View className="flex-1 ml-3">
-                        <Text numberOfLines={1} className="font-medium text-onSurface dark:text-onSurface-dark">{cat?.label || item.category}</Text>
+                        <View className="flex-row items-center">
+                          <Text numberOfLines={1} className="shrink font-medium text-onSurface dark:text-onSurface-dark">{cat?.label || item.category}</Text>
+                          {(item.recurring_monthly || !!item.recurring_parent_id) && (
+                            <Icon name="repeat" size={14} color={c.onSurfaceVariant} className="ml-1" />
+                          )}
+                          {item.deductible === false && (
+                            <Text className="ml-1.5 text-[10px] text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('expenses.notDeductible')}</Text>
+                          )}
+                        </View>
                         {(!!detail || !!item.driver) && (
                           <View className="flex-row items-center mt-0.5">
                             {!!item.driver && <PersonAvatar person={item.driver} size={16} />}
