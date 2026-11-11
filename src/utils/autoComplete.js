@@ -1,3 +1,7 @@
+// TODO(rutero): pruebas unitarias con Jest de esta fórmula (es la misma que
+//   RutaAutoCompleter en la API, que sí tiene pruebas) e integración
+//   continua con GitHub Actions que ejecute PHPUnit y Jest en cada envío,
+//   como describe la metodología del TFM (capítulo 3).
 // Cierre automático de viajes: lo ejecuta un cron en rutero-api
 // (RutaAutoCompleter). Aquí solo se replica su fórmula para la vista previa
 // del formulario ("se completará hacia las..."); en los listados manda el

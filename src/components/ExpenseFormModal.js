@@ -40,6 +40,9 @@ function validate(form, category, t) {
  * categoría: vehículo (combustible, taller...), conductor (nóminas, multas) y
  * descripción obligatoria en "Otro".
  */
+// TODO(rutero): adjuntar la foto del ticket (expo-image-picker o la cámara),
+//   comprimirla antes de subirla y mostrarla en miniatura en la lista de
+//   gastos. Requiere el almacenamiento persistente descrito en Expense.php.
 export default function ExpenseFormModal({ visible, onDismiss, onSubmit, onDelete, initialValues, categories, vehicles = [], defaultDate, submitting }) {
   const { t } = useTranslation();
   const { user } = useAuth();

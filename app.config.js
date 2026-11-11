@@ -3,6 +3,10 @@
 //  - En local, Expo carga .env (API_BASE=http://127.0.0.1:8000).
 //  - En EAS Build, los perfiles de eas.json fijan API_BASE (el .env no se sube).
 // Si una variable no está definida se usa el valor de app.json.
+// TODO(rutero): definir DOWNLOAD_URL en los perfiles de eas.json (enlace del
+//   APK de distribución interna o de la ficha de Google Play) para que las
+//   invitaciones incluyan dónde descargar la app; en la API, la misma URL va
+//   en RUTERO_DOWNLOAD_URL para la página /i/{código}.
 module.exports = ({ config }) => ({
   ...config,
   extra: {

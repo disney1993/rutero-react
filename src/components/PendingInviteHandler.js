@@ -13,6 +13,11 @@ import {
   savePendingInvite,
 } from '../utils/pendingInvite';
 
+// TODO(rutero): los enlaces rutero:// no se pueden probar con Expo Go (usa su
+//   propio esquema exp://): hace falta un APK de EAS. Para probar en Expo Go,
+//   abrir exp://<IP>:8081/--/invite/CODIGO, que extractInviteCode también
+//   reconoce. Con Android App Links (ver InvitationLinkController en la API)
+//   el enlace https abriría la app sin pasar por la página web.
 // Una cuenta se considera "recién creada" durante este tiempo: si se registró
 // desde un enlace de invitación, se une al equipo sin preguntar.
 const NEW_ACCOUNT_MS = 30 * 60 * 1000;

@@ -16,6 +16,10 @@ function shortDate(iso) {
   return `${day}/${month}`;
 }
 
+// TODO(rutero): para un conductor, "Todo correcto" asigna a su nombre todos
+//   los viajes sin asignar de la lista, aunque algunos los hiciera otro
+//   compañero de la jornada (ver el TODO de RutaController::review). Valorar
+//   ocultar el botón a los conductores o pedir que confirmen uno a uno.
 // Lista de viajes que el cron dio por completados (efectivo) y que nadie ha
 // revisado todavía. Es el único sitio donde se corrige un cierre automático,
 // y está pensado para usarse con el vehículo detenido.

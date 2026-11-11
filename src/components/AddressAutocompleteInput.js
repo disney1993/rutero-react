@@ -7,6 +7,11 @@ import { api } from '../utils/apiClient';
 const DEBOUNCE_MS = 450;
 const MIN_CHARS = 3;
 
+// TODO(rutero): atribución de OpenStreetMap. La licencia ODbL exige mostrar
+//   "© OpenStreetMap contributors" donde se usan sus datos: añadirla bajo la
+//   lista de sugerencias (y en Ajustes → Acerca de). El cambio de Nominatim
+//   a Photon se hace en la API (GeocodingController) sin tocar este
+//   componente.
 // Busca direcciones reales de España vía el backend (que a su vez consulta
 // Nominatim/OSM). Si no se encuentra o no se elige ninguna sugerencia, el
 // texto se guarda igual como dirección libre — solo que sin coordenadas,
