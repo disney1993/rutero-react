@@ -33,6 +33,7 @@ export default function TimePickerField({ label, value, onChange, error }) {
     <>
       <TextInput
         mode="outlined"
+        dense
         label={label}
         value={value || ''}
         editable={false}

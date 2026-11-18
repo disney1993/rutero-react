@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, FlatList } from 'react-native';
-import { Text, Card, TextInput, Button, SegmentedButtons, HelperText, IconButton, FAB, ActivityIndicator, useTheme } from 'react-native-paper';
+import { Text, Card, TextInput, Button, SegmentedButtons, HelperText, IconButton, ActivityIndicator, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
@@ -9,6 +9,9 @@ import { useConfirm } from '../context/ConfirmContext';
 import { toastSuccess, toastError } from '../utils/toast';
 import VehicleFormModal from '../components/VehicleFormModal';
 import RutasPlanner from '../components/RutasPlanner';
+import AppFab from '../components/AppFab';
+import VehicleTypeIcon from '../components/VehicleTypeIcon';
+import { vehicleTypeLabel } from '../utils/vehicles';
 
 const TABS = [
   { value: 'profile', label: 'Perfil' },
@@ -202,8 +205,16 @@ export default function AdminUserDetailScreen({ route, navigation }) {
               renderItem={({ item }) => (
                 <Card style={styles.card} onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }}>
                   <Card.Content>
-                    <Text variant="titleMedium">{item.plate || 'Sin matrícula'}</Text>
-                    <Text variant="bodySmall">{[item.make, item.model].filter(Boolean).join(' ')}</Text>
+                    <View style={styles.vehicleHeader}>
+                      <View style={[styles.typeIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
+                        <VehicleTypeIcon type={item.vehicle_type} size={22} color={theme.colors.primary} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text variant="titleMedium" numberOfLines={1}>{item.plate || 'Sin matrícula'}</Text>
+                        <Text variant="labelSmall" style={{ opacity: 0.65 }}>{vehicleTypeLabel(item.vehicle_type)}</Text>
+                        <Text variant="bodySmall">{[item.make, item.model].filter(Boolean).join(' ')}</Text>
+                      </View>
+                    </View>
                   </Card.Content>
                   <Card.Actions>
                     <IconButton icon="pencil" onPress={() => { setEditingVehicle(item); setVehicleFormVisible(true); }} />
@@ -213,7 +224,7 @@ export default function AdminUserDetailScreen({ route, navigation }) {
               )}
             />
           )}
-          <FAB icon="plus" style={styles.fab} onPress={() => { setEditingVehicle(null); setVehicleFormVisible(true); }} />
+          <AppFab icon="plus" style={styles.fab} onPress={() => { setEditingVehicle(null); setVehicleFormVisible(true); }} />
           <VehicleFormModal
             visible={vehicleFormVisible}
             onDismiss={() => setVehicleFormVisible(false)}
@@ -259,6 +270,14 @@ const styles = StyleSheet.create({
   emptyIcon: { opacity: 0.4 },
   emptyText: { textAlign: 'center', opacity: 0.6 },
   card: { marginBottom: 8, borderRadius: 14 },
+  vehicleHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  typeIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chipText: { color: '#fff', fontSize: 12 },
   route: { marginTop: 2, opacity: 0.7 },

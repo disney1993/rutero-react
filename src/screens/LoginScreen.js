@@ -90,7 +90,7 @@ export default function LoginScreen({ navigation }) {
       >
         <Card style={[styles.card, { width: cardWidth }]} mode="elevated">
           <Card.Content style={styles.cardContent}>
-            <Text variant="headlineMedium" style={styles.title}>{t('auth.appName')}</Text>
+            <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.primary }]}>{t('auth.appName')}</Text>
             <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
               {t('auth.loginTitle')}
             </Text>

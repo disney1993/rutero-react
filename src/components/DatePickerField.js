@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Portal, Modal, TextInput, Button, useTheme } from 'react-native-paper';
 import { Calendar } from 'react-native-calendars';
-import { todayISO, formatDateHuman } from '../utils/rutas';
+import { todayISO, formatDateShort } from '../utils/rutas';
 
 // Selector de fecha basado en react-native-calendars (ya usada en el resto
 // de la app), en vez de escribir "YYYY-MM-DD" a mano.
@@ -14,8 +14,9 @@ export default function DatePickerField({ label, value, onChange, error }) {
     <>
       <TextInput
         mode="outlined"
+        dense
         label={label}
-        value={value ? formatDateHuman(value) : ''}
+        value={value ? formatDateShort(value) : ''}
         editable={false}
         onPressIn={() => setVisible(true)}
         right={<TextInput.Icon icon="calendar" onPress={() => setVisible(true)} />}

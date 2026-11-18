@@ -1,11 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Portal, Modal, Text, TextInput, Button, Switch, HelperText, useTheme } from 'react-native-paper';
 import { PLATE_REGEX } from '../utils/validators';
 import { api } from '../utils/apiClient';
 import AutocompleteInput from './AutocompleteInput';
+import VehicleTypeIcon from './VehicleTypeIcon';
+import {
+  VEHICLE_TYPES,
+  DEFAULT_VEHICLE_TYPE,
+  normalizeVehicleType,
+} from '../utils/vehicles';
 
-const emptyForm = { plate: '', make: '', model: '', color: '', year: '', seats: '', vehicle_type: '', active: true, notes: '' };
+const emptyForm = {
+  plate: '',
+  make: '',
+  model: '',
+  color: '',
+  year: '',
+  seats: '',
+  vehicle_type: DEFAULT_VEHICLE_TYPE,
+  active: true,
+  notes: '',
+};
 const currentYear = new Date().getFullYear();
 
 function validate(form) {
@@ -15,14 +31,59 @@ function validate(form) {
 
   if (!form.make.trim()) e.make = 'La marca es obligatoria';
   if (!form.model.trim()) e.model = 'El modelo es obligatorio';
+  if (!normalizeVehicleType(form.vehicle_type)) e.vehicle_type = 'Elige un tipo';
 
   if (form.year && (!/^\d{4}$/.test(form.year) || Number(form.year) < 1900 || Number(form.year) > currentYear + 1)) {
     e.year = `Debe estar entre 1900 y ${currentYear + 1}`;
   }
-  if (form.seats && (!/^\d+$/.test(form.seats) || Number(form.seats) < 1 || Number(form.seats) > 9)) {
-    e.seats = 'Entre 1 y 9 asientos';
+  if (form.seats && (!/^\d+$/.test(form.seats) || Number(form.seats) < 1 || Number(form.seats) > 20)) {
+    e.seats = 'Entre 1 y 20 asientos';
   }
   return e;
+}
+
+function TypePicker({ value, onChange }) {
+  const theme = useTheme();
+  const selected = normalizeVehicleType(value);
+
+  return (
+    <View style={styles.typeWrap}>
+      <Text variant="labelMedium" style={styles.typeLabel}>Tipo de vehículo</Text>
+      <View style={styles.typeGrid}>
+        {VEHICLE_TYPES.map((t) => {
+          const active = selected === t.value;
+          return (
+            <Pressable
+              key={t.value}
+              onPress={() => onChange(t.value)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={[
+                styles.typeChip,
+                {
+                  borderColor: active ? theme.colors.primary : theme.colors.outlineVariant,
+                  backgroundColor: active ? theme.colors.primaryContainer : 'transparent',
+                },
+              ]}
+            >
+              <VehicleTypeIcon type={t.value} size={18} color={active ? theme.colors.primary : theme.colors.onSurface} />
+              <Text
+                variant="labelSmall"
+                numberOfLines={1}
+                style={{
+                  color: active ? theme.colors.primary : theme.colors.onSurface,
+                  fontWeight: active ? '700' : '500',
+                  fontSize: 10,
+                }}
+              >
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
 }
 
 export default function VehicleFormModal({ visible, onDismiss, onSubmit, initialValues, submitting }) {
@@ -41,6 +102,7 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
           ...initialValues,
           year: initialValues.year ? String(initialValues.year) : '',
           seats: initialValues.seats ? String(initialValues.seats) : '',
+          vehicle_type: normalizeVehicleType(initialValues.vehicle_type),
         });
       } else {
         setForm(emptyForm);
@@ -78,7 +140,7 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
       color: form.color.trim() || null,
       year: form.year ? Number(form.year) : null,
       seats: form.seats ? Number(form.seats) : null,
-      vehicle_type: form.vehicle_type.trim() || null,
+      vehicle_type: normalizeVehicleType(form.vehicle_type),
       active: form.active,
       notes: form.notes || null,
     });
@@ -94,6 +156,9 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
 
           <TextInput mode="outlined" label="Matrícula" value={form.plate} onChangeText={set('plate')} autoCapitalize="characters" style={styles.input} error={submitted && !!errors.plate} />
           <HelperText type="error" visible={submitted && !!errors.plate}>{errors.plate}</HelperText>
+
+          <TypePicker value={form.vehicle_type} onChange={set('vehicle_type')} />
+          {submitted && errors.vehicle_type ? <HelperText type="error" visible>{errors.vehicle_type}</HelperText> : null}
 
           <View style={styles.row}>
             <View style={styles.half}>
@@ -120,10 +185,7 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
             </View>
           </View>
 
-          <View style={styles.row}>
-            <TextInput mode="outlined" label="Color" value={form.color} onChangeText={set('color')} style={[styles.input, styles.half]} />
-            <TextInput mode="outlined" label="Tipo" value={form.vehicle_type} onChangeText={set('vehicle_type')} style={[styles.input, styles.half]} />
-          </View>
+          <TextInput mode="outlined" label="Color" value={form.color} onChangeText={set('color')} style={styles.input} />
 
           <View style={styles.row}>
             <View style={styles.half}>
@@ -156,12 +218,34 @@ export default function VehicleFormModal({ visible, onDismiss, onSubmit, initial
 }
 
 const styles = StyleSheet.create({
-  modal: { margin: 16, borderRadius: 16, maxHeight: '90%' },
+  modal: {
+    marginHorizontal: 12,
+    marginVertical: 8,
+    borderRadius: 14,
+    maxHeight: '96%',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 480,
+  },
   scrollContent: { padding: 20 },
   title: { fontWeight: '700', marginBottom: 16 },
   input: { marginBottom: 4 },
   row: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
+  typeWrap: { marginBottom: 12 },
+  typeLabel: { marginBottom: 8, opacity: 0.7 },
+  typeGrid: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6 },
+  typeChip: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+  },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 12 },
   submitButton: { marginTop: 16, borderRadius: 10 },
   cancelButton: { marginTop: 4 },

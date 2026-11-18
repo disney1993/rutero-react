@@ -58,7 +58,19 @@ export function AuthProvider({ children }) {
   };
 
   const value = useMemo(
-    () => ({ user, token, bootstrapping, isAdmin: !!user?.is_admin, login, logout, updateUser, refreshUser }),
+    () => ({
+      user,
+      token,
+      bootstrapping,
+      isAdmin: !!user?.is_admin,
+      accountMode: user?.account_mode || 'owner',
+      isDriverOnly: user?.account_mode === 'driver' || !!user?.is_driver_only,
+      isOwnerOnly: (user?.account_mode || 'owner') === 'owner',
+      login,
+      logout,
+      updateUser,
+      refreshUser,
+    }),
     [user, token, bootstrapping]
   );
 

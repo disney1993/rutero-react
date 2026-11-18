@@ -1,18 +1,31 @@
+const path = require('path');
 const createExpoWebpackConfigAsync = require('@expo/webpack-config');
 
 module.exports = async function (env, argv) {
   const config = await createExpoWebpackConfigAsync(env, argv);
 
-  // Warnings inofensivas conocidas: @react-navigation/drawer trae una vista
-  // "legacy" que referencia una API antigua de react-native-reanimated que ya
-  // no se exporta (no se usa en tiempo de ejecución), y react-native-paper
-  // intenta primero un paquete de iconos que no está instalado antes de caer
-  // en el fallback de @expo/vector-icons que sí funciona. Ninguna de las dos
-  // afecta al build ni al funcionamiento de la app.
+  // Paper tries the scoped package first; map it to Expo's icon set on web.
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    '@react-native-vector-icons/material-design-icons':
+      '@expo/vector-icons/MaterialCommunityIcons',
+    'react-native-vector-icons': '@expo/vector-icons',
+    '@react-native/assets-registry/registry': false,
+  };
+
+  // Ensure icon .ttf files from @expo/vector-icons are emitted as assets.
+  config.module.rules.push({
+    test: /\.ttf$/,
+    include: [
+      path.resolve(__dirname, 'node_modules/@expo/vector-icons'),
+      path.resolve(__dirname, 'node_modules/react-native-vector-icons'),
+    ],
+    type: 'asset/resource',
+  });
+
   config.ignoreWarnings = [
     ...(config.ignoreWarnings || []),
     /export 'default'\.'interpolate' \(imported as 'Animated'\) was not found in 'react-native-reanimated'/,
-    /Can't resolve '@react-native-vector-icons\/material-design-icons'/,
   ];
 
   return config;

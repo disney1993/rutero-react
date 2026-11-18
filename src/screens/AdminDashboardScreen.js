@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api, errorMessage } from '../utils/apiClient';
 import { getInitials } from '../utils/avatar';
 import { toastError } from '../utils/toast';
+import GeocodeStatusCard from '../components/GeocodeStatusCard';
 
 export default function AdminDashboardScreen({ navigation }) {
   const theme = useTheme();
@@ -59,6 +60,8 @@ export default function AdminDashboardScreen({ navigation }) {
           <StatTile label="Vehículos" value={summary.vehicles_total} theme={theme} />
         </View>
       )}
+
+      <GeocodeStatusCard />
 
       <TextInput
         mode="outlined"

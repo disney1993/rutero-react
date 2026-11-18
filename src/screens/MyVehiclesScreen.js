@@ -1,12 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { Text, Card, IconButton, FAB, Chip, ActivityIndicator, useTheme } from 'react-native-paper';
+import { Text, Card, IconButton, Chip, ActivityIndicator, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
 import { useConfirm } from '../context/ConfirmContext';
 import { toastSuccess, toastError } from '../utils/toast';
 import VehicleFormModal from '../components/VehicleFormModal';
+import AppFab from '../components/AppFab';
+import VehicleTypeIcon from '../components/VehicleTypeIcon';
+import { vehicleTypeLabel } from '../utils/vehicles';
 
 export default function MyVehiclesScreen() {
   const theme = useTheme();
@@ -96,7 +99,15 @@ export default function MyVehiclesScreen() {
             <Card style={styles.card} onPress={() => openEdit(item)}>
               <Card.Content>
                 <View style={styles.cardHeader}>
-                  <Text variant="titleMedium" style={styles.cardHeaderTitle} numberOfLines={1}>{item.plate || 'Sin matrícula'}</Text>
+                  <View style={styles.cardTitleRow}>
+                    <View style={[styles.typeIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
+                      <VehicleTypeIcon type={item.vehicle_type} size={22} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.cardTitleText}>
+                      <Text variant="titleMedium" style={styles.cardHeaderTitle} numberOfLines={1}>{item.plate || 'Sin matrícula'}</Text>
+                      <Text variant="labelSmall" style={{ opacity: 0.65 }}>{vehicleTypeLabel(item.vehicle_type)}</Text>
+                    </View>
+                  </View>
                   <Chip
                     compact
                     style={{ backgroundColor: item.active ? theme.colors.secondary : theme.colors.surfaceDisabled }}
@@ -116,7 +127,7 @@ export default function MyVehiclesScreen() {
         />
       )}
 
-      <FAB icon="plus" label="Nuevo vehículo" style={styles.fab} onPress={openCreate} />
+      <AppFab icon="plus" label="Nuevo vehículo" style={styles.fab} onPress={openCreate} />
 
       <VehicleFormModal
         visible={formVisible}
@@ -139,7 +150,16 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center', opacity: 0.6, paddingHorizontal: 24 },
   card: { marginBottom: 10, borderRadius: 14 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  cardHeaderTitle: { flex: 1, minWidth: 0 },
+  cardTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
+  typeIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitleText: { flex: 1, minWidth: 0 },
+  cardHeaderTitle: { flexShrink: 1 },
   chipText: { color: '#fff', fontSize: 12 },
   fab: { position: 'absolute', right: 16, bottom: 16 },
 });

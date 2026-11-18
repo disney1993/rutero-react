@@ -1,84 +1,102 @@
-# Rutero (app móvil/web)
+# Rutero React
 
-Cliente en React Native (Expo) para **Rutero**, una app para propietarios de vehículos y conductores que gestionan rutas de transporte de clientes (traslados, taxis privados, viajes concertados, etc.).
+Cliente **Expo 48** (React Native + web) para **Rutero**: propietarios y conductores gestionan rutas/traslados frente a la API Laravel.
 
-## ¿Qué hace la app?
+## Descripción
 
-- **Mis rutas**: calendario mensual + vista diaria (ordenada por hora exacta) para crear, editar y eliminar rutas — cliente, teléfono, origen/destino con autocompletado de direcciones, distancia y precio calculados automáticamente, fecha/hora, pasajeros, vehículo, estado y precio final.
-- **Mis vehículos**: alta de vehículos propios (matrícula, marca/modelo con autocompletado, color, año, plazas) usados luego al crear rutas.
-- **Como conductor**: introduciendo el código mensual de un propietario, el conductor ve y gestiona las rutas que le asigna o crea para ese propietario, sin acceso a sus informes de ingresos.
-- **Panel de administración** (rol `admin`): búsqueda y edición de usuarios, gestión de sus vehículos y rutas, e informes agregados.
-- **Perfil**: datos personales, color de avatar, precio por km/moneda por defecto, tema claro/oscuro/sistema e idioma (español/inglés).
+- **Mis rutas**: en **web**, agenda **FullCalendar** (día ~26h con hombros −02:00→26:00, semana y lista unificadas). En **nativo**, lista del día. Crear/editar rutas con origen/destino, distancia, precio, vehículo y estado.
+- **Mis vehículos**: alta/edición (matrícula, marca/modelo, color, plazas…).
+- **Jornadas (driver)**: unirse por código, jornada A–C del día, planner acotado a esa jornada.
+- **Admin**: búsqueda de usuarios, vehículos/rutas e informes.
+- **Perfil**: datos, precio/km, moneda, tema, idioma (ES/EN), preferencia de modo (owner / driver).
+- Auth email o **Google**; UI Paper + drawer.
 
-El backend (API REST con Sanctum) está en [`rutero-api`](../rutero-api), en el mismo entorno Laragon.
+Backend: [`rutero-api`](../rutero-api) → por defecto `http://127.0.0.1:8000`.
 
 ## Requisitos
 
 - Node.js + npm
-- Expo CLI (se instala bajo demanda con `npx`/`npm run`)
-- Expo Go (móvil) o un navegador (para `--web`)
-- La API `rutero-api` corriendo en `http://127.0.0.1:8000` (ver su README)
+- API `rutero-api` en marcha
+- Navegador (web) y/o Expo Go / emulador
 
 ## Instalación
 
 ```powershell
-cd c:\laragon\www\rutero-react
+cd C:\laragon\www\rutero-react
 npm install
 ```
 
-## Ejecutar el frontend
+## Comandos de uso
 
-Con la API ya corriendo (ver [`rutero-api/README.md`](../rutero-api/README.md)):
+### API primero (otra terminal)
 
 ```powershell
-cd c:\laragon\www\rutero-react
+cd C:\laragon\www\rutero-api
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+### Arrancar el frontend
+
+```powershell
+cd C:\laragon\www\rutero-react
 npm run web
-# equivale a: expo start --web
 ```
 
-También puedes usar:
+| Recurso     | URL / comando |
+|-------------|----------------|
+| Web (Webpack) | http://localhost:19006 (Expo también en :19000) |
+| Bundler QR    | `npm run start` → Expo Go |
+| Android       | `npm run android` |
+| iOS           | `npm run ios` (macOS + Xcode) |
+
+Scripts npm:
 
 ```powershell
-npm run start   # abre el bundler de Expo; escanea el QR con Expo Go en el móvil
-npm run android # requiere Android Studio / emulador o dispositivo conectado
-npm run ios     # requiere macOS + Xcode
+npm run start    # expo start
+npm run web      # expo start --web
+npm run android  # expo run:android
+npm run ios      # expo run:ios
 ```
 
-## Ejecutar la API (rutero-api)
-
-En otra terminal:
-
-```powershell
-cd c:\laragon\www\rutero-api
-C:\tools\php85\php.exe artisan serve --host=127.0.0.1 --port=8000
-```
-
-Más detalles (instalación, migraciones, seeders, endpoints) en [`rutero-api/README.md`](../rutero-api/README.md).
+Si el puerto 19000 está ocupado, libera procesos o elige otro puerto cuando Expo lo pregunte.
 
 ## Stack
 
-- UI: `react-native-paper` (Material Design), tema claro/oscuro
-- Navegación: `@react-navigation/native` + `native-stack` + `drawer`
-- Calendario: `react-native-calendars`
-- i18n: `i18next` / `react-i18next` (español/inglés)
-- Notificaciones: `react-native-flash-message`
-- Autenticación Google: `expo-auth-session`
+- UI: `react-native-paper`, tema claro/oscuro
+- Nav: `@react-navigation` (stack + drawer)
+- Agenda web: `@fullcalendar/*` (timeGrid + list)
+- Calendario nativo auxiliar: `react-native-calendars`
+- i18n: `i18next` / `react-i18next`
+- Google: `expo-auth-session`
+- HTTP: `axios` → `src/utils/apiClient.js` (`apiBase` desde `app.json` → `expo.extra`)
 
-## Flujo de registro y roles
+## Configuración
 
-El backend soporta roles `admin`, `owner` (propietario) y `driver` (conductor).
+### API base
 
-- Para registrarse como `driver` asociado a un `owner`, se introduce el `owner_code` del propietario durante el registro (o después, desde "Como conductor").
-- Para Google Sign-In la app obtiene un `id_token` y lo envía a `POST /api/auth/google/mobile` para crear/recuperar la sesión.
+`app.json` → `expo.extra.apiBase` (default `http://127.0.0.1:8000`).
 
-## Integración con backend
+### Google Sign-In (opcional)
 
-- `apiBase` apunta por defecto a `http://127.0.0.1:8000` — revisa `src/utils/apiClient.js` si cambias el host/puerto de la API.
-- Endpoints principales usados: `/api/register`, `/api/login`, `/api/auth/google/mobile`, `/api/rutas`, `/api/vehicles`, `/api/owner/codes`, `/api/driver/join-code`, `/api/geocode/*`, `/api/admin/*`.
+Client IDs en `app.json` → `expo.extra`:
 
-## Configuración de Google Sign-In (opcional)
+- `googleWebClientId`
+- `googleIosClientId` / `googleAndroidClientId`
 
-Si quieres habilitar el login con Google:
+En el backend: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_MAPS_API_KEY`.
 
-- Crea client IDs (iOS, Android y/o Web) en Google Cloud.
-- Añádelos en `app.json` → `expo.extra` o en variables de entorno locales antes de compilar.
+## Roles en la app
+
+| Rol / modo | Pantallas típicas |
+|------------|-------------------|
+| Owner      | Rutas, vehículos, códigos / jornadas de drivers |
+| Driver     | Mis jornadas, planner de la jornada activa |
+| Admin      | Dashboard + detalle de usuario |
+
+Registro driver: `owner_code` del propietario. Google: `id_token` → `POST /api/auth/google/mobile`.
+
+## Endpoints que usa el cliente
+
+`/api/register`, `/api/login`, `/api/auth/google/mobile`, `/api/user`, `/api/rutas`, `/api/vehicles`, `/api/jornadas`, `/api/owner/codes`, `/api/driver/join-code`, `/api/geocode/*`, `/api/admin/*`.
+
+Más detalle de API: [`rutero-api/README.md`](../rutero-api/README.md).

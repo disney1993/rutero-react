@@ -1,14 +1,22 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, ActivityIndicator, TextInput, Button, SegmentedButtons, HelperText, IconButton, useTheme } from 'react-native-paper';
+import { View, StyleSheet, FlatList, Pressable } from 'react-native';
+import { Text, ActivityIndicator, TextInput, Button, HelperText, IconButton, Chip, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { CODE_REGEX } from '../utils/validators';
+import { formatDateHuman } from '../utils/rutas';
 import RutasPlanner from '../components/RutasPlanner';
 
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+function dateOnly(value) {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function ownerName(jornada) {
+  const o = jornada?.owner;
+  if (!o) return `Propietario #${jornada?.owner_id}`;
+  return [o.first_name, o.last_name].filter(Boolean).join(' ') || `#${jornada.owner_id}`;
 }
 
 export default function DriverModeScreen() {
@@ -21,17 +29,16 @@ export default function DriverModeScreen() {
   const [joining, setJoining] = useState(false);
   const [codeError, setCodeError] = useState('');
   const [joinMessage, setJoinMessage] = useState('');
-  const [selectedOwnerId, setSelectedOwnerId] = useState(null);
+  const [activeJornada, setActiveJornada] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
 
   const loadEntries = useCallback(async () => {
     setLoadingEntries(true);
     try {
-      const resp = await api.get('/driver/my-codes');
-      const active = resp.data.filter((e) => e.owner_month_code?.month === currentMonth());
-      setEntries(active);
-      setSelectedOwnerId((prev) => prev ?? active[0]?.owner_month_code.owner_id ?? null);
+      const resp = await api.get('/driver/jornadas');
+      setEntries(resp.data || []);
     } catch (err) {
-      setJoinMessage(errorMessage(err, 'No se pudieron cargar tus códigos'));
+      setJoinMessage(errorMessage(err, 'No se pudieron cargar tus jornadas'));
     } finally {
       setLoadingEntries(false);
     }
@@ -48,10 +55,13 @@ export default function DriverModeScreen() {
     }
     setJoining(true);
     try {
-      await api.post('/driver/join-code', { code, month: currentMonth() });
+      const resp = await api.post('/jornadas/join', { code });
       setCodeInput('');
       setJoinMessage('Te uniste correctamente');
-      loadEntries();
+      await loadEntries();
+      if (resp.data?.jornada) {
+        openJornada(resp.data.jornada);
+      }
     } catch (err) {
       setJoinMessage(errorMessage(err, 'Código inválido'));
     } finally {
@@ -59,10 +69,51 @@ export default function DriverModeScreen() {
     }
   };
 
+  const openJornada = async (jornada) => {
+    setActiveJornada(jornada);
+    try {
+      const resp = await api.get(`/jornadas/${jornada.id}/vehicles`);
+      setVehicles(resp.data.data || []);
+    } catch (err) {
+      setVehicles([]);
+    }
+  };
+
+  if (activeJornada) {
+    const day = dateOnly(activeJornada.date);
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.activeHeader}>
+          <IconButton icon="arrow-left" onPress={() => setActiveJornada(null)} />
+          <View style={styles.activeHeaderText}>
+            <Text variant="titleSmall">Jornada {activeJornada.label} · {formatDateHuman(day)}</Text>
+            <Text variant="bodySmall" style={styles.muted}>{ownerName(activeJornada)}</Text>
+          </View>
+        </View>
+        <View style={styles.plannerWrap}>
+          <RutasPlanner
+            key={activeJornada.id}
+            lockedDate={day}
+            fetchParams={{ jornada_id: activeJornada.id }}
+            filterRuta={(ruta) => ruta.jornada_id === activeJornada.id || (ruta.owner_id === activeJornada.owner_id && dateOnly(ruta.trip_date) === day && ruta.driver_id === user.id)}
+            createExtra={{ jornada_id: activeJornada.id }}
+            vehicles={vehicles}
+            canEdit={() => !!activeJornada.allow_edit}
+            canDelete={(ruta) => !!activeJornada.allow_delete && ruta.created_by === user.id}
+            editFieldSet={() => 'full'}
+            createBlocked={!activeJornada.allow_create}
+            createBlockedMessage="Esta jornada no permite crear viajes"
+            emptyMessage="No hay viajes en esta jornada. Toca + para registrar uno."
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.joinSection}>
-        <Text variant="labelLarge">Unirme a un código de propietario</Text>
+        <Text variant="labelLarge">Unirme a una jornada</Text>
         <View style={styles.joinRow}>
           <TextInput
             mode="outlined"
@@ -84,34 +135,38 @@ export default function DriverModeScreen() {
         <ActivityIndicator style={styles.loader} />
       ) : entries.length === 0 ? (
         <View style={styles.emptyState}>
-          <IconButton icon="account-arrow-right-outline" size={40} style={styles.emptyIcon} disabled />
-          <Text style={styles.emptyText}>Aún no te has unido a ningún propietario este mes.{'\n'}Introduce un código arriba para empezar.</Text>
+          <IconButton icon="calendar-account" size={40} style={styles.emptyIcon} disabled />
+          <Text style={styles.emptyText}>
+            Aún no te has unido a ninguna jornada.{'\n'}Introduce un código arriba para empezar el día.
+          </Text>
         </View>
       ) : (
-        <>
-          {entries.length > 1 && (
-            <SegmentedButtons
-              value={selectedOwnerId ? String(selectedOwnerId) : ''}
-              onValueChange={(v) => setSelectedOwnerId(Number(v))}
-              buttons={entries.map((e) => ({
-                value: String(e.owner_month_code.owner_id),
-                label: e.owner_month_code.owner?.first_name || `#${e.owner_month_code.owner_id}`,
-              }))}
-              style={styles.ownerPicker}
-            />
-          )}
-
-          <View style={styles.plannerWrap}>
-            <RutasPlanner
-              key={selectedOwnerId}
-              filterRuta={(ruta) => ruta.owner_id === selectedOwnerId && ruta.driver_id === user.id}
-              createExtra={{ owner_id: selectedOwnerId }}
-              canDelete={(ruta) => ruta.created_by === user.id && ruta.driver_id === user.id}
-              editFieldSet={(ruta) => (ruta.created_by === user.id ? 'full' : 'driverUpdate')}
-              emptyMessage="No tienes rutas este día para este propietario."
-            />
-          </View>
-        </>
+        <FlatList
+          data={entries}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => {
+            const jornada = item.jornada;
+            if (!jornada) return null;
+            return (
+              <Pressable
+                onPress={() => openJornada(jornada)}
+                style={({ pressed }) => [
+                  styles.entryCard,
+                  { borderColor: theme.colors.outlineVariant, backgroundColor: theme.colors.surface },
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <View style={styles.entryTop}>
+                  <Chip compact>{`Jornada ${jornada.label}`}</Chip>
+                  <Text variant="bodySmall">{formatDateHuman(dateOnly(jornada.date))}</Text>
+                </View>
+                <Text variant="titleMedium">{ownerName(jornada)}</Text>
+                <Text variant="bodySmall" style={styles.muted}>Código {jornada.code}</Text>
+              </Pressable>
+            );
+          }}
+        />
       )}
     </View>
   );
@@ -122,10 +177,15 @@ const styles = StyleSheet.create({
   joinSection: { padding: 16, paddingBottom: 0 },
   joinRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   codeInput: { flex: 1 },
-  ownerPicker: { marginHorizontal: 16, marginTop: 8 },
   loader: { marginTop: 24 },
   emptyState: { alignItems: 'center', marginTop: 24, paddingHorizontal: 24 },
   emptyIcon: { opacity: 0.4 },
   emptyText: { textAlign: 'center', opacity: 0.6 },
+  list: { padding: 16, gap: 12 },
+  entryCard: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 14, marginBottom: 10 },
+  entryTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  muted: { opacity: 0.65, marginTop: 2 },
+  activeHeader: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+  activeHeaderText: { flex: 1 },
   plannerWrap: { flex: 1 },
 });

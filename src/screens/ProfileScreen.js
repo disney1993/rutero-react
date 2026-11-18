@@ -8,12 +8,12 @@ import { useThemeMode } from '../context/ThemeModeContext';
 import { changeLanguage, SUPPORTED_LANGUAGES } from '../i18n';
 import { getInitials, getRandomAvatarColor, AVATAR_PALETTE } from '../utils/avatar';
 import { isValidName, isValidEmail, isValidPassword } from '../utils/validators';
-import { toastSuccess, toastError } from '../utils/toast';
+import { toastSuccess, toastError, toastInfo } from '../utils/toast';
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logout, isAdmin } = useAuth();
   const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
 
   // --- Avatar color ---
@@ -177,6 +177,31 @@ export default function ProfileScreen() {
     }
   };
 
+  const [accountMode, setAccountMode] = useState(
+    user.account_mode === 'both' && !user.is_admin ? 'owner' : (user.account_mode || 'owner')
+  );
+  const [savingAccountMode, setSavingAccountMode] = useState(false);
+
+  const changeAccountMode = async (value) => {
+    setAccountMode(value);
+    setSavingAccountMode(true);
+    try {
+      const resp = await api.patch('/user/preferences', { account_mode: value });
+      await updateUser(resp.data);
+      toastSuccess(t('profile.accountModeUpdated'));
+      toastInfo(t(
+        value === 'driver' ? 'nav.modeNoticeDriver'
+          : value === 'owner' ? 'nav.modeNoticeOwner'
+            : 'nav.modeNoticeBoth'
+      ));
+    } catch (err) {
+      setAccountMode(user.account_mode === 'both' && !user.is_admin ? 'owner' : (user.account_mode || 'owner'));
+      toastError(errorMessage(err, t('alerts.genericError')));
+    } finally {
+      setSavingAccountMode(false);
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.background }]}>
       <Card style={styles.card} mode="elevated">
@@ -261,6 +286,24 @@ export default function ProfileScreen() {
           <Button mode="contained" onPress={savePricing} loading={savingPricing} disabled={savingPricing || !pricingDirty || !pricingValid} style={styles.saveButton}>
             {t('profile.savePreferences')}
           </Button>
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.card} mode="elevated">
+        <Card.Content>
+          <Text variant="titleMedium" style={styles.sectionTitle}>{t('profile.accountModeSection')}</Text>
+          <Text variant="bodySmall" style={styles.hint}>{t(isAdmin ? 'profile.accountModeHintAdmin' : 'profile.accountModeHint')}</Text>
+          <SegmentedButtons
+            value={accountMode}
+            onValueChange={changeAccountMode}
+            buttons={[
+              ...(isAdmin ? [{ value: 'both', label: t('profile.modeBoth') }] : []),
+              { value: 'owner', label: t('profile.modeOwner') },
+              { value: 'driver', label: t('profile.modeDriver') },
+            ]}
+            style={styles.input}
+          />
+          {savingAccountMode && <ActivityIndicator size="small" style={styles.inlineLoader} />}
         </Card.Content>
       </Card>
 

@@ -1,22 +1,30 @@
-import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, FlatList, useWindowDimensions, RefreshControl, Pressable } from 'react-native';
-import { Text, Avatar, IconButton, FAB, ActivityIndicator, useTheme } from 'react-native-paper';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, StyleSheet, FlatList, useWindowDimensions, RefreshControl, Pressable, Platform } from 'react-native';
+import { Text, Avatar, IconButton, ActivityIndicator, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
-import { STATUS_COLORS, shiftDate, formatDateHuman, todayISO } from '../utils/rutas';
+import { STATUS_COLORS, shiftDate, formatDateHuman, todayISO, normalizeTripDate, normalizeTripTime } from '../utils/rutas';
 import { rutaHour } from '../utils/schedule';
 import { formatCurrency } from '../utils/currency';
 import { getVehicleColor } from '../utils/avatar';
+import { vehicleIconSource } from './VehicleTypeIcon';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { toastSuccess, toastError } from '../utils/toast';
 import RutaFormModal from './RutaFormModal';
 import MonthCalendarPicker from './MonthCalendarPicker';
+import AppFab from './AppFab';
 
-// Vista de planificación reutilizada por "Mis rutas" (propietario), "Como
-// conductor" y el detalle de usuario del admin — misma pantalla, distintas
-// reglas de permiso/alcance según las props que reciba.
+const IS_WEB = Platform.OS === 'web';
+
+let RutasAgendaWeb = null;
+if (IS_WEB) {
+  // FullCalendar es DOM-only; en nativo se usa la agenda lista.
+  // eslint-disable-next-line global-require
+  RutasAgendaWeb = require('./RutasAgendaWeb').default;
+}
+
 export default function RutasPlanner({
   fetchParams = {},
   filterRuta = () => true,
@@ -29,6 +37,7 @@ export default function RutasPlanner({
   createBlocked = false,
   createBlockedMessage = '',
   onCreateBlockedPress,
+  lockedDate = null,
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -38,14 +47,19 @@ export default function RutasPlanner({
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
 
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [selectedDate, setSelectedDate] = useState(lockedDate || todayISO());
   const [rutas, setRutas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
   const [editingRuta, setEditingRuta] = useState(null);
+  const [createDefaults, setCreateDefaults] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (lockedDate) setSelectedDate(lockedDate);
+  }, [lockedDate]);
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -70,36 +84,54 @@ export default function RutasPlanner({
     load({ silent: true });
   };
 
-  // El día "visible" incluye un par de horas del día anterior/siguiente
-  // (22:00-23:59 y 00:00-01:59) para no perder rutas que cruzan la
-  // medianoche. Se ordenan por fecha+hora real, no por franjas en punto,
-  // porque una ruta puede empezar a las 10:05 o a las 10:45.
   const prevDate = shiftDate(selectedDate, -1);
   const nextDate = shiftDate(selectedDate, 1);
   const withinWindow = (r) => {
-    if (r.trip_date === selectedDate) return true;
-    if (r.trip_date === prevDate) return rutaHour(r) !== null && rutaHour(r) >= 22;
-    if (r.trip_date === nextDate) return rutaHour(r) !== null && rutaHour(r) <= 1;
+    const d = normalizeTripDate(r.trip_date);
+    if (d === selectedDate) return true;
+    if (d === prevDate) return rutaHour(r) !== null && rutaHour(r) >= 22;
+    if (d === nextDate) return rutaHour(r) !== null && rutaHour(r) <= 1;
     return false;
   };
 
-  const noTimeRutas = rutas.filter((r) => r.trip_date === selectedDate && !r.trip_time);
-  const timedRutas = rutas
-    .filter((r) => r.trip_time && withinWindow(r))
-    .sort((a, b) => `${a.trip_date}T${a.trip_time}`.localeCompare(`${b.trip_date}T${b.trip_time}`));
+  const visibleRutas = useMemo(
+    () => rutas.filter((r) => {
+      const d = normalizeTripDate(r.trip_date);
+      const t = normalizeTripTime(r.trip_time);
+      if (!t) return d === selectedDate;
+      return withinWindow(r);
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rutas, selectedDate]
+  );
+
+  const noTimeRutas = visibleRutas.filter((r) => normalizeTripDate(r.trip_date) === selectedDate && !normalizeTripTime(r.trip_time));
+  const timedRutas = visibleRutas
+    .filter((r) => normalizeTripTime(r.trip_time) && withinWindow(r))
+    .sort((a, b) => {
+      const da = `${normalizeTripDate(a.trip_date)}T${normalizeTripTime(a.trip_time)}`;
+      const db = `${normalizeTripDate(b.trip_date)}T${normalizeTripTime(b.trip_time)}`;
+      return da.localeCompare(db);
+    });
 
   const isEmpty = noTimeRutas.length === 0 && timedRutas.length === 0;
+  const useAgenda = IS_WEB && !!RutasAgendaWeb;
 
-  const openCreate = () => {
+  const openCreate = (defaults = null) => {
     if (createBlocked) {
       if (onCreateBlockedPress) onCreateBlockedPress();
       else toastError(createBlockedMessage || 'No puedes crear rutas todavía');
       return;
     }
     setEditingRuta(null);
+    setCreateDefaults(defaults);
     setFormVisible(true);
   };
-  const openEdit = (ruta) => { setEditingRuta(ruta); setFormVisible(true); };
+  const openEdit = (ruta) => {
+    setCreateDefaults(null);
+    setEditingRuta(ruta);
+    setFormVisible(true);
+  };
 
   const handleSubmit = async (payload) => {
     setSubmitting(true);
@@ -112,6 +144,7 @@ export default function RutasPlanner({
         toastSuccess('Ruta creada');
       }
       setFormVisible(false);
+      setCreateDefaults(null);
       load();
     } catch (err) {
       toastError(errorMessage(err, 'No se pudo guardar la ruta'));
@@ -138,12 +171,19 @@ export default function RutasPlanner({
     }
   };
 
-  // Fila compacta tipo tabla: icono del coche | hora + cliente + precio |
-  // trayecto. El resto de detalles (teléfono, notas, distancia...) se ven al
-  // tocar la fila, que abre el mismo formulario en modo edición.
+  const formDefaultDate = editingRuta
+    ? undefined
+    : (createDefaults?.date || selectedDate);
+  const formDefaultTime = editingRuta
+    ? null
+    : (createDefaults?.time || null);
+
   const renderRow = (item) => {
+    const vehicle = vehicles.find((v) => v.id === item.vehicle_id);
     const vehicleColor = getVehicleColor(item.vehicle_id);
-    const dayTag = item.trip_date === prevDate ? 'ayer' : item.trip_date === nextDate ? 'mañana' : null;
+    const day = normalizeTripDate(item.trip_date);
+    const time = normalizeTripTime(item.trip_time);
+    const dayTag = day === prevDate ? 'ayer' : day === nextDate ? 'mañana' : null;
     const price = item.final_price ?? item.estimated_price;
 
     return (
@@ -153,7 +193,7 @@ export default function RutasPlanner({
         pressed && { backgroundColor: theme.colors.surfaceVariant },
       ]}>
         <Avatar.Icon
-          icon={item.vehicle_id ? 'car' : 'car-off'}
+          icon={item.vehicle_id ? vehicleIconSource(vehicle?.vehicle_type) : 'car-off'}
           size={36}
           style={vehicleColor ? { backgroundColor: vehicleColor } : { backgroundColor: theme.colors.surfaceDisabled }}
           color="#fff"
@@ -163,7 +203,7 @@ export default function RutasPlanner({
             <View style={styles.rowTimeAndStatus}>
               <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status] }]} />
               <Text variant="bodySmall" style={styles.time}>
-                {item.trip_time}{dayTag ? ` (${dayTag})` : ''}
+                {time || 'Sin hora'}{dayTag ? ` (${dayTag})` : ''}
               </Text>
             </View>
             {price != null && (
@@ -193,22 +233,45 @@ export default function RutasPlanner({
         </Pressable>
       )}
 
-      <View style={styles.dateBar}>
-        <IconButton icon="chevron-left" onPress={() => setSelectedDate((d) => shiftDate(d, -1))} />
-        <Text
-          variant="titleSmall"
-          style={styles.dateLabel}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          onPress={() => setCalendarVisible(true)}
-        >
-          {formatDateHuman(selectedDate)}
-        </Text>
-        <IconButton icon="chevron-right" onPress={() => setSelectedDate((d) => shiftDate(d, 1))} />
-      </View>
+      {!useAgenda && (
+        <View style={styles.dateBar}>
+          <IconButton
+            icon="chevron-left"
+            disabled={!!lockedDate}
+            onPress={() => setSelectedDate((d) => shiftDate(d, -1))}
+          />
+          <Text
+            variant="titleSmall"
+            style={styles.dateLabel}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            onPress={lockedDate ? undefined : () => setPickerVisible(true)}
+          >
+            {formatDateHuman(selectedDate)}
+          </Text>
+          <IconButton
+            icon="chevron-right"
+            disabled={!!lockedDate}
+            onPress={() => setSelectedDate((d) => shiftDate(d, 1))}
+          />
+        </View>
+      )}
 
       {loading ? (
         <ActivityIndicator style={styles.loader} />
+      ) : useAgenda ? (
+        <RutasAgendaWeb
+          selectedDate={selectedDate}
+          rutas={visibleRutas}
+          currency={currency}
+          editable={!createBlocked}
+          lockedDate={!!lockedDate}
+          onSelectRuta={openEdit}
+          onCreateAt={(slot) => openCreate(slot)}
+          onDatesChange={(iso) => {
+            if (!lockedDate && iso !== selectedDate) setSelectedDate(iso);
+          }}
+        />
       ) : (
         <FlatList
           data={isEmpty ? [] : timedRutas}
@@ -245,27 +308,28 @@ export default function RutasPlanner({
         />
       )}
 
-      <FAB
+      <AppFab
         icon={createBlocked ? 'lock-outline' : 'plus'}
         label={createBlocked ? undefined : 'Nueva ruta'}
         style={styles.fab}
-        onPress={openCreate}
+        onPress={() => openCreate(null)}
       />
 
       <RutaFormModal
         visible={formVisible}
-        onDismiss={() => setFormVisible(false)}
+        onDismiss={() => { setFormVisible(false); setCreateDefaults(null); }}
         onSubmit={handleSubmit}
         initialValues={editingRuta}
-        defaultDate={selectedDate}
+        defaultDate={formDefaultDate}
+        defaultTime={formDefaultTime}
         fieldSet={editingRuta ? editFieldSet(editingRuta) : 'full'}
         vehicles={vehicles}
         submitting={submitting}
       />
 
       <MonthCalendarPicker
-        visible={calendarVisible}
-        onDismiss={() => setCalendarVisible(false)}
+        visible={pickerVisible && !lockedDate}
+        onDismiss={() => setPickerVisible(false)}
         onSelectDate={setSelectedDate}
         selectedDate={selectedDate}
         fetchParams={fetchParams}

@@ -28,6 +28,10 @@ export function partsFromISO(iso) {
 }
 
 export function rutaHour(ruta) {
-  if (!ruta.trip_time) return null;
-  return Number(ruta.trip_time.slice(0, 2));
+  const t = typeof ruta.trip_time === 'string' ? ruta.trip_time : ruta.trip_time == null ? null : String(ruta.trip_time);
+  if (!t) return null;
+  // Prefer HH from HH:MM…; ignore ISO dates accidentally passed as time.
+  const m = t.match(/^(\d{1,2}):/);
+  if (!m) return null;
+  return Number(m[1]);
 }

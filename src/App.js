@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider, IconButton } from 'react-native-paper';
@@ -14,6 +14,7 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import MyRutasScreen from './screens/MyRutasScreen';
 import MyVehiclesScreen from './screens/MyVehiclesScreen';
+import MyJornadasScreen from './screens/MyJornadasScreen';
 import DriverModeScreen from './screens/DriverModeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
@@ -23,6 +24,8 @@ import AppDrawerContent from './components/AppDrawerContent';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeModeProvider, useThemeMode } from './context/ThemeModeContext';
 import { ConfirmProvider } from './context/ConfirmContext';
+import { toastInfo } from './utils/toast';
+import { api } from './utils/apiClient';
 
 const AuthStack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -59,23 +62,82 @@ function AdminDashboardNavigator() {
 }
 
 function AppDrawer() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isDriverOnly, isOwnerOnly } = useAuth();
   const { t } = useTranslation();
 
   return (
     <Drawer.Navigator screenOptions={{ headerTitleAlign: 'center' }} drawerContent={(props) => <AppDrawerContent {...props} />}>
       {isAdmin ? (
         <Drawer.Screen name="Dashboard" component={AdminDashboardNavigator} options={{ headerShown: false, title: t('nav.dashboard') }} />
+      ) : isDriverOnly ? (
+        <Drawer.Screen name="DriverMode" component={DriverModeScreen} options={{ title: t('nav.jornadas') }} />
       ) : (
         <>
           <Drawer.Screen name="MyRutas" component={MyRutasScreen} options={{ title: t('nav.myRutas') }} />
           <Drawer.Screen name="MyVehicles" component={MyVehiclesScreen} options={{ title: t('nav.myVehicles') }} />
-          <Drawer.Screen name="DriverMode" component={DriverModeScreen} options={{ title: t('nav.driverMode') }} />
+          <Drawer.Screen name="MyJornadas" component={MyJornadasScreen} options={{ title: t('nav.myJornadas') }} />
+          {!isOwnerOnly && (
+            <Drawer.Screen name="DriverMode" component={DriverModeScreen} options={{ title: t('nav.driverMode') }} />
+          )}
         </>
       )}
       <Drawer.Screen name="Profile" component={ProfileScreen} options={{ title: t('nav.profile') }} />
     </Drawer.Navigator>
   );
+}
+
+function accountModeNoticeKey(user) {
+  if (user?.is_admin) {
+    const mode = user?.account_mode || 'both';
+    if (mode === 'driver') return 'nav.modeNoticeDriver';
+    if (mode === 'owner') return 'nav.modeNoticeOwner';
+    if (mode === 'both') return 'nav.modeNoticeBoth';
+    return 'nav.modeNoticeAdmin';
+  }
+  const mode = user?.account_mode || 'owner';
+  if (mode === 'driver') return 'nav.modeNoticeDriver';
+  return 'nav.modeNoticeOwner';
+}
+
+// Avisa una vez por sesión al restaurar sesión o tras login/registro.
+// Si un usuario normal aún tiene "both" en sesión local (legado), lo corrige a owner.
+function AccountModeNotice() {
+  const { user, bootstrapping, updateUser, isAdmin } = useAuth();
+  const { t } = useTranslation();
+  const shownForUserId = useRef(null);
+
+  useEffect(() => {
+    if (bootstrapping || !user?.id) {
+      if (!user) shownForUserId.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      let current = user;
+      if (!isAdmin && user.account_mode === 'both') {
+        try {
+          const resp = await api.patch('/user/preferences', { account_mode: 'owner' });
+          if (cancelled) return;
+          await updateUser(resp.data);
+          current = resp.data;
+        } catch (err) {
+          current = { ...user, account_mode: 'owner' };
+          await updateUser({ account_mode: 'owner' });
+        }
+      }
+
+      if (cancelled) return;
+      if (shownForUserId.current === current.id) return;
+      shownForUserId.current = current.id;
+      toastInfo(t(accountModeNoticeKey(current)));
+    })();
+
+    return () => { cancelled = true; };
+  }, [bootstrapping, user, t, isAdmin, updateUser]);
+
+  return null;
 }
 
 // El tema/idioma guardados en el perfil del servidor mandan sobre lo que
@@ -129,6 +191,7 @@ function ThemedApp() {
     <PaperProvider theme={theme}>
       <AuthProvider>
         <PreferencesSync />
+        <AccountModeNotice />
         <ConfirmProvider>
           <RootNavigator navTheme={navTheme} />
         </ConfirmProvider>

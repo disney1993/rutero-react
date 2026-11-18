@@ -1,0 +1,92 @@
+.rutero-fc {
+  --fc-border-color: rgba(42, 52, 49, 0.14);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(47, 143, 134, 0.06);
+  --fc-today-bg-color: rgba(47, 143, 134, 0.12);
+  --fc-now-indicator-color: #e53935;
+  --fc-list-event-hover-bg-color: rgba(47, 143, 134, 0.08);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  height: 100%;
+  min-height: 480px;
+}
+
+.rutero-fc.rutero-fc--dark {
+  --fc-border-color: rgba(0, 229, 255, 0.18);
+  --fc-neutral-bg-color: rgba(0, 229, 255, 0.05);
+  --fc-today-bg-color: rgba(255, 46, 200, 0.1);
+  --fc-now-indicator-color: #FF2EC8;
+  --fc-list-event-hover-bg-color: rgba(0, 229, 255, 0.1);
+  color: #E6E8F2;
+}
+
+.rutero-fc .fc {
+  height: 100%;
+}
+
+.rutero-fc .fc-view-harness {
+  background: transparent;
+}
+
+.rutero-fc .fc-scrollgrid,
+.rutero-fc .fc-scrollgrid td,
+.rutero-fc .fc-scrollgrid th {
+  border-color: var(--fc-border-color);
+}
+
+.rutero-fc .fc-col-header-cell-cushion,
+.rutero-fc .fc-timegrid-slot-label-cushion,
+.rutero-fc .fc-list-day-cushion {
+  font-family: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rutero-fc .fc-event {
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+
+/* Hide FC built-in time/title chrome — we render a single custom line. */
+.rutero-fc .fc-event .fc-event-time,
+.rutero-fc .fc-event .fc-event-title,
+.rutero-fc .fc-list-event-time {
+  display: none !important;
+}
+
+.rutero-fc .fc-timegrid-event .fc-event-main {
+  display: flex;
+  align-items: center;
+  padding: 2px 5px;
+}
+
+.rutero-fc .rutero-ev {
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.rutero-fc .fc-list-event-title a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.rutero-fc .fc-daygrid-event {
+  white-space: normal;
+}
+
+.rutero-fc .fc-list-event:hover td {
+  background: var(--fc-list-event-hover-bg-color);
+}
+
+.rutero-fc.rutero-fc--dark .fc-col-header-cell-cushion,
+.rutero-fc.rutero-fc--dark .fc-timegrid-slot-label-cushion,
+.rutero-fc.rutero-fc--dark .fc-list-day-text,
+.rutero-fc.rutero-fc--dark .fc-list-day-side-text {
+  color: #A8B0C8;
+}
