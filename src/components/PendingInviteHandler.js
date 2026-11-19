@@ -32,19 +32,6 @@ function fullName(owner) {
   return [owner?.first_name, owner?.last_name].filter(Boolean).join(' ');
 }
 
-/** "16/11/2026" para un día o "11/2026" para un mes (jornadas). */
-export function invitePeriod(info) {
-  if ((info?.type === 'day' || info?.type === 'jornada') && info.valid_on) {
-    const [y, m, d] = info.valid_on.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
-  }
-  if (info?.type === 'month' && info.month) {
-    const [y, m] = info.month.split('-');
-    return `${m}/${y}`;
-  }
-  return '';
-}
-
 /**
  * Enlaces de invitación (https://<api>/i/CODIGO o rutero://invite/CODIGO):
  * - Se guardan al abrir la app con ellos, haya sesión o no.
@@ -99,7 +86,7 @@ export default function PendingInviteHandler() {
       if (!isNewAccount(user)) {
         const ok = await confirm({
           title: t('invite.confirmTitle'),
-          message: t(`invite.confirmMessage_${info.type}`, { name, period: invitePeriod(info) }),
+          message: t('invite.confirmMessage_team', { name }),
           confirmLabel: t('invite.confirmAction'),
         });
         if (!ok) {

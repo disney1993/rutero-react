@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Share } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Dialog, Icon, IconButton, Input, cn } from './ui';
 import PersonAvatar from './ui/PersonAvatar';
@@ -13,7 +12,6 @@ import { useThemeMode } from '../context/ThemeModeContext';
 import { colors } from '../theme';
 import { useTeam } from '../hooks/useTeam';
 import { errorMessage } from '../utils/apiClient';
-import { inviteLink } from '../utils/pendingInvite';
 import { haptics } from '../utils/haptics';
 import { toastError, toastSuccess } from '../utils/toast';
 
@@ -48,8 +46,8 @@ function Chip({ selected, onPress, children, accessibilityLabel }) {
 /**
  * Jornadas del día (propietario): una fila de chips con el avatar del
  * conductor de cada jornada, "Todas" cuando hay varias y "+ Nueva jornada".
- * Debajo, el código de la jornada elegida con Copiar / Compartir y el acceso
- * a sus ajustes (nombre, conductor, vehículo, nuevo código, eliminar).
+ * Debajo, la jornada elegida con su conductor y el acceso a sus ajustes
+ * (nombre, conductor, vehículo, eliminar).
  *
  * `jornadasApi` es el resultado de useJornadas; `selected` es el id de la
  * jornada, ALL_JORNADAS o VIRTUAL_JORNADA (día sin jornadas todavía).
@@ -67,7 +65,6 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
 
   const isVirtual = jornadas.length === 0;
   const current = isVirtual ? null : jornadas.find((j) => j.id === selected) || null;
-  const ownerName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
 
   // La jornada virtual se crea de verdad la primera vez que se usa.
   const withReal = async (fn) => {
@@ -98,22 +95,6 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
       setBusy(false);
     }
   };
-
-  const copy = () => withReal(async (j) => {
-    await Clipboard.setStringAsync(j.code);
-    toastSuccess(t('ownerCode.copied'));
-  });
-
-  const share = () => withReal(async (j) => {
-    const message = t('jornadas.shareMessage', {
-      name: ownerName, label: j.label, date: dmy(j.date), link: inviteLink(j.code), code: j.code,
-    });
-    try {
-      await Share.share({ message, title: t('ownerCode.shareSubject') }, { subject: t('ownerCode.shareSubject'), dialogTitle: t('ownerCode.shareSubject') });
-    } catch {
-      // Hoja cerrada: nada que hacer.
-    }
-  });
 
   const openSettings = () => withReal(async (j) => setSettingsFor(j));
 
@@ -157,19 +138,13 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
       {selected !== ALL_JORNADAS && (
         <View className="mx-3 mt-1.5 flex-row items-center rounded-xl px-2.5 py-1.5 bg-surface dark:bg-surface-dark border border-border/60 dark:border-border-dark/60">
           <View className="flex-1">
-            <Text className="text-[11px] text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
-              {t('jornadas.codeOf', { label: current?.label || t('jornadas.first') })}
+            <Text className="text-sm font-medium text-onSurface dark:text-onSurface-dark">
+              {current?.label || t('jornadas.first')}
             </Text>
-            {current?.code ? (
-              <Text selectable className="text-base font-bold tracking-[2px] text-onSurface dark:text-onSurface-dark">{current.code}</Text>
-            ) : (
-              <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('jornadas.codeOnUse')}</Text>
-            )}
+            <Text className="text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+              {current?.driver ? [current.driver.first_name, current.driver.last_name].filter(Boolean).join(' ') : t('team.me')}
+            </Text>
           </View>
-          <IconButton icon="content-copy" size={20} onPress={copy} disabled={busy} accessibilityLabel={t('common.copy')} />
-          <Button mode="contained" icon="share-variant" compact onPress={share} disabled={busy} textClassName="text-sm text-onPrimary dark:text-onPrimary-dark">
-            {t('ownerCode.share')}
-          </Button>
           <IconButton icon="cog-outline" size={20} onPress={openSettings} disabled={busy} accessibilityLabel={t('jornadas.settings')} />
         </View>
       )}
@@ -189,14 +164,6 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
             toastError(errorMessage(err, t('alerts.genericError')));
           }
         }}
-        onRegenerate={async () => {
-          try {
-            const updated = await jornadasApi.regenerateCode(settingsFor.id);
-            setSettingsFor(updated);
-          } catch (err) {
-            toastError(errorMessage(err, t('alerts.genericError')));
-          }
-        }}
         onDelete={async () => {
           try {
             await jornadasApi.remove(settingsFor.id);
@@ -211,13 +178,13 @@ export default function JornadaBar({ date, vehicles = [], jornadasApi, selected,
   );
 }
 
-function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSave, onRegenerate, onDelete }) {
+function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSave, onDelete }) {
   const { t } = useTranslation();
   const [label, setLabel] = useState('');
   const [driverId, setDriverId] = useState(null);
   const [vehicleId, setVehicleId] = useState(null);
   const [saving, setSaving] = useState(false);
-  // Confirmaciones dentro del diálogo: 'code' (nuevo código) o 'delete'.
+  // Confirmación de borrado dentro del diálogo.
   const [pending, setPending] = useState(null);
 
   useEffect(() => {
@@ -226,7 +193,7 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
     setLabel(jornada.label || '');
     setDriverId(jornada.driver_id ?? null);
     setVehicleId(jornada.vehicle_id ?? null);
-  }, [jornada?.id, jornada?.code]);
+  }, [jornada?.id]);
 
   if (!jornada) return null;
   const labelError = label.trim() ? '' : t('jornadas.labelRequired');
@@ -249,20 +216,14 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
         {vehicles.length > 0 && (
           <VehicleSelect label={t('rutaForm.vehicle')} value={vehicleId} vehicles={vehicles} onChange={(id) => setVehicleId(id ?? null)} />
         )}
-        <View className="flex-row items-center mt-2">
-          <Text className="flex-1 text-sm text-onSurface dark:text-onSurface-dark">
-            {t('jornadas.code')}: <Text className="font-bold tracking-[2px]">{jornada.code}</Text>
-          </Text>
-          <Button mode="text" compact icon="refresh" onPress={() => setPending('code')}>{t('jornadas.newCode')}</Button>
-        </View>
         {!!pending && (
           <InlineConfirm
             className="mt-2"
-            destructive={pending === 'delete'}
-            title={pending === 'delete' ? t('jornadas.delete') : t('jornadas.newCode')}
-            message={pending === 'delete' ? t('jornadas.deleteConfirm', { label: jornada.label }) : t('jornadas.newCodeConfirm')}
-            confirmLabel={pending === 'delete' ? t('common.delete') : t('jornadas.newCode')}
-            onConfirm={async () => { const action = pending; setPending(null); await (action === 'delete' ? onDelete() : onRegenerate()); }}
+            destructive
+            title={t('jornadas.delete')}
+            message={t('jornadas.deleteConfirm', { label: jornada.label })}
+            confirmLabel={t('common.delete')}
+            onConfirm={async () => { setPending(null); await onDelete(); }}
             onCancel={() => setPending(null)}
           />
         )}

@@ -4,16 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { CODE_REGEX } from '../utils/validators';
-import { todayISO } from '../utils/rutas';
-import { driverOwnerEntries } from '../utils/driverOwners';
 
-function currentMonth() {
-  return todayISO().slice(0, 7);
-}
-
-// Owners the driver works for: team links (permanent) plus active owner codes
-// (current month or today's day code), and the join flow for an 8-character
-// code (owner code or team invitation code).
+// Propietarios para los que conduce el usuario (su equipo) y el campo para
+// canjear a mano el código de una invitación al equipo.
 export function useDriverJornada({ enabled = true } = {}) {
   const { t } = useTranslation();
   const { refreshUser } = useAuth();
@@ -35,11 +28,13 @@ export function useDriverJornada({ enabled = true } = {}) {
     }
     setLoading(true);
     try {
-      const [codesResp, ownersResp] = await Promise.all([
-        api.get('/driver/my-codes'),
-        api.get('/me/owners').catch(() => ({ data: [] })),
-      ]);
-      const active = driverOwnerEntries(codesResp.data || [], ownersResp.data || [], todayISO());
+      const resp = await api.get('/me/owners');
+      // Misma forma que tenían las entradas de código, que usan las pantallas.
+      const active = (resp.data || []).map((l) => ({
+        id: `team-${l.id}`,
+        team: true,
+        owner_month_code: { owner_id: l.owner_id, owner: l.owner, type: 'team' },
+      }));
       setEntries(active);
       setSelectedOwnerId((prev) => {
         if (prev && active.some((e) => e.owner_month_code.owner_id === prev)) return prev;
@@ -64,9 +59,7 @@ export function useDriverJornada({ enabled = true } = {}) {
     }
     setJoining(true);
     try {
-      // month se envía por compatibilidad con códigos mensuales; los de día
-      // se validan en el servidor por valid_on.
-      await api.post('/driver/join-code', { code, month: currentMonth() });
+      await api.post('/driver/join-code', { code });
       setCodeInput('');
       setJoinMessage(t('driver.joined'));
       await refreshUser();

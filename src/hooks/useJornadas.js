@@ -55,13 +55,7 @@ export function useJornadas({ date, enabled = true }) {
     await reload();
   }, [reload]);
 
-  const regenerateCode = useCallback(async (id) => {
-    const resp = await api.post(`/jornadas/${id}/code`);
-    await reload();
-    return resp.data;
-  }, [reload]);
-
-  return { jornadas, loading, reload, create, ensureFirst, update, remove, regenerateCode };
+  return { jornadas, loading, reload, create, ensureFirst, update, remove };
 }
 
 /**
