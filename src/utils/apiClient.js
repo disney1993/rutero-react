@@ -35,6 +35,29 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let onUnauthorized = null;
+
+/** Lo registra AuthContext: qué hacer cuando la API ya no acepta el token. */
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn;
+}
+
+// Token caducado o revocado: se cierra la sesión en vez de dejar la app con
+// "Unauthenticated." en cada pantalla. Solo cuenta si la petición llevaba el
+// token actual, para que una respuesta antigua no cierre una sesión nueva.
+api.interceptors.response.use(undefined, (err) => {
+  const sent = err.config?.headers?.Authorization;
+  if (err.response?.status === 401 && currentToken && sent === `Bearer ${currentToken}`) {
+    currentToken = null;
+    onUnauthorized?.();
+  }
+  return Promise.reject(err);
+});
+
 export function errorMessage(err, fallback) {
+  // Mensaje de Laravel para un token no válido; el login fallido trae el suyo.
+  if (err.response?.status === 401 && err.response.data?.message === 'Unauthenticated.') {
+    return i18n.t('auth.sessionExpired');
+  }
   return err.response?.data?.message || fallback || i18n.t('common.unexpectedError');
 }

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, setAuthToken } from '../utils/apiClient';
+import { api, setAuthToken, setUnauthorizedHandler } from '../utils/apiClient';
+import { toastInfo } from '../utils/toast';
+import i18n from '../i18n';
 
 const STORAGE_KEY = 'rutero.session';
 
@@ -61,6 +63,15 @@ export function AuthProvider({ children }) {
     setUser(null);
     await AsyncStorage.removeItem(STORAGE_KEY);
   };
+
+  // La API rechaza el token (caducado, revocado o de otra base de datos).
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      logout().catch(() => {});
+      toastInfo(i18n.t('auth.sessionExpired'));
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const value = useMemo(
     () => ({ user, token, bootstrapping, isAdmin: !!user?.is_admin, login, logout, updateUser, refreshUser }),

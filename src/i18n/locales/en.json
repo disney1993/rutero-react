@@ -56,7 +56,8 @@
     "registerFailed": "Could not complete registration",
     "googleNotConfigured": "No Google client ID configured. Add the client IDs in app.json (expo.extra).",
     "googleFailed": "Could not complete Google sign-in",
-    "googleError": "Google Sign-In error"
+    "googleError": "Google Sign-In error",
+    "sessionExpired": "Your session has expired. Please sign in again."
   },
   "profile": {
     "title": "Profile settings",

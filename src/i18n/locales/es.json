@@ -56,7 +56,8 @@
     "registerFailed": "No se pudo completar el registro",
     "googleNotConfigured": "No hay client ID de Google configurado. Añade los client IDs en app.json (expo.extra).",
     "googleFailed": "No se pudo completar el inicio con Google",
-    "googleError": "Error en Google Sign-In"
+    "googleError": "Error en Google Sign-In",
+    "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión."
   },
   "profile": {
     "title": "Ajustes de perfil",
