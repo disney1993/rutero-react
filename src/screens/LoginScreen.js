@@ -15,6 +15,10 @@ const GOOGLE_IOS_CLIENT_ID = Constants.expoConfig?.extra?.googleIosClientId || '
 const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || '';
 const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || '';
 
+// En web, Google vuelve a la app dentro de la ventana emergente: esto le pasa el
+// resultado a la ventana principal y cierra la emergente.
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen({ navigation }) {
   const { t } = useTranslation();
   const { login: setSession } = useAuth();
@@ -145,11 +149,13 @@ export default function LoginScreen({ navigation }) {
               {t('auth.continueWithGoogle')}
             </Button>
 
-            <View className="flex-row justify-center flex-wrap mt-4">
-              <Button compact mode="text" onPress={fillAdmin}>Admin</Button>
-              <Button compact mode="text" onPress={fillOwner}>Owner</Button>
-              <Button compact mode="text" onPress={fillDriver}>Driver</Button>
-            </View>
+            {__DEV__ && (
+              <View className="flex-row justify-center flex-wrap mt-4">
+                <Button compact mode="text" onPress={fillAdmin}>Admin</Button>
+                <Button compact mode="text" onPress={fillOwner}>Owner</Button>
+                <Button compact mode="text" onPress={fillDriver}>Driver</Button>
+              </View>
+            )}
 
             <Button mode="text" onPress={() => navigation.navigate('Register')} className="mt-1">
               {t('auth.noAccount')}
