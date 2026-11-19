@@ -45,6 +45,7 @@
       "package": "com.rutero.app"
     },
     "web": {
+      "name": "Rutero",
       "bundler": "metro"
     }
   }
