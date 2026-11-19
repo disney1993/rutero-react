@@ -28,6 +28,34 @@ export default function TeamInvitationsCard({ onChanged, className = 'mb-4' }) {
   // En modo conductor el campo "Código" ya está en Rutas; un propietario puede
   // cambiar a modo conductor. Solo el usuario nuevo no tendría dónde escribirlo.
   const showJoin = !isAdmin && !isOwnerCapable(user, isAdmin) && !user?.has_driver_capability;
+  // La API no enseña invitaciones por email hasta que el email está confirmado.
+  const needsVerify = !isAdmin && !!user && !user.email_verified_at;
+  const [verifyBusy, setVerifyBusy] = useState(false);
+
+  const resendVerification = async () => {
+    setVerifyBusy(true);
+    try {
+      await api.post('/email/verification-notification');
+      toastSuccess(t('team.verifyResent'));
+    } catch (err) {
+      toastError(errorMessage(err, t('alerts.genericError')));
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const checkVerified = async () => {
+    setVerifyBusy(true);
+    try {
+      const fresh = await refreshUser();
+      if (fresh?.email_verified_at) load();
+      else toastError(t('team.verifyStillPending'));
+    } catch (err) {
+      toastError(errorMessage(err, t('alerts.genericError')));
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
 
   const joinWithCode = async () => {
     const value = code.trim().toUpperCase();
@@ -73,11 +101,27 @@ export default function TeamInvitationsCard({ onChanged, className = 'mb-4' }) {
     }
   };
 
-  if (invitations.length === 0 && !showJoin) return null;
+  if (invitations.length === 0 && !showJoin && !needsVerify) return null;
 
   return (
     <Card className={className}>
       <Card.Content>
+        {needsVerify && (
+          <View className={invitations.length > 0 || showJoin ? 'mb-3' : ''}>
+            <Text className="font-bold mb-1 text-onSurface dark:text-onSurface-dark">{t('team.verifyTitle')}</Text>
+            <Text className="text-xs mb-2 text-onSurfaceVariant dark:text-onSurfaceVariant-dark">
+              {t('team.verifyHint', { email: user.email })}
+            </Text>
+            <View className="flex-row gap-2">
+              <Button compact mode="outlined" disabled={verifyBusy} onPress={resendVerification}>
+                {t('team.verifyResend')}
+              </Button>
+              <Button compact mode="contained" loading={verifyBusy} disabled={verifyBusy} onPress={checkVerified}>
+                {t('team.verifyDone')}
+              </Button>
+            </View>
+          </View>
+        )}
         {invitations.length > 0 && (
           <Text className="font-bold mb-1 text-onSurface dark:text-onSurface-dark">{t('team.invitationsTitle')}</Text>
         )}
