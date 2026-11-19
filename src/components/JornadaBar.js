@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, Icon, IconButton, Input, cn } from './ui';
+import { Button, Dialog, Icon, IconButton, Input, SegmentedButtons, cn } from './ui';
 import PersonAvatar from './ui/PersonAvatar';
 import VehicleSelect from './ui/VehicleSelect';
 import FieldLabel from './ui/FieldLabel';
 import DriverAvatarPicker from './DriverAvatarPicker';
+import JornadaDriversField from './JornadaDriversField';
 import { useAuth } from '../context/AuthContext';
 import InlineConfirm from './ui/InlineConfirm';
 import { useThemeMode } from '../context/ThemeModeContext';
@@ -182,6 +183,8 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
   const { t } = useTranslation();
   const [label, setLabel] = useState('');
   const [driverId, setDriverId] = useState(null);
+  const [driverIds, setDriverIds] = useState([]);
+  const [visibility, setVisibility] = useState('team');
   const [vehicleId, setVehicleId] = useState(null);
   const [saving, setSaving] = useState(false);
   // Confirmación de borrado dentro del diálogo.
@@ -192,6 +195,8 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
     setPending(null);
     setLabel(jornada.label || '');
     setDriverId(jornada.driver_id ?? null);
+    setDriverIds((jornada.drivers || []).map((d) => d.id));
+    setVisibility(jornada.visibility || 'team');
     setVehicleId(jornada.vehicle_id ?? null);
   }, [jornada?.id]);
 
@@ -201,7 +206,10 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
   const save = async () => {
     if (labelError) return;
     setSaving(true);
-    await onSave({ label: label.trim(), driver_id: driverId, vehicle_id: vehicleId });
+    // El principal siempre va asignado; quitarlo como principal no lo quita de la lista
+    // salvo que se desmarque. Cada asignado nuevo recibe su aviso en la API.
+    const ids = [...new Set([...driverIds, ...(driverId ? [driverId] : [])])];
+    await onSave({ label: label.trim(), driver_id: driverId, vehicle_id: vehicleId, driver_ids: ids, visibility });
     setSaving(false);
   };
 
@@ -216,6 +224,18 @@ function JornadaSettingsDialog({ jornada, vehicles, team, owner, onDismiss, onSa
         {vehicles.length > 0 && (
           <VehicleSelect label={t('rutaForm.vehicle')} value={vehicleId} vehicles={vehicles} onChange={(id) => setVehicleId(id ?? null)} />
         )}
+        <FieldLabel>{t('jornadas.assignedTitle')}</FieldLabel>
+        <Text className="mb-1 text-xs text-onSurfaceVariant dark:text-onSurfaceVariant-dark">{t('jornadas.assignedHint')}</Text>
+        <JornadaDriversField team={team} value={driverIds} onChange={setDriverIds} mainDriverId={driverId} notices={jornada.notices} />
+        <FieldLabel>{t('jornadas.visibilityTitle')}</FieldLabel>
+        <SegmentedButtons
+          value={visibility}
+          onValueChange={setVisibility}
+          buttons={[
+            { value: 'team', label: t('jornadas.visibilityTeam') },
+            { value: 'drivers', label: t('jornadas.visibilityDrivers') },
+          ]}
+        />
         {!!pending && (
           <InlineConfirm
             className="mt-2"

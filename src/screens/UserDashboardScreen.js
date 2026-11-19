@@ -9,6 +9,7 @@ import AdminUserPicker from '../components/AdminUserPicker';
 import UserStatsDashboard from '../components/UserStatsDashboard';
 import RenderBoundary from '../components/RenderBoundary';
 import TeamInvitationsCard from '../components/TeamInvitationsCard';
+import JornadaNoticesCard from '../components/JornadaNoticesCard';
 import { resolveWorkMode } from '../utils/capabilities';
 
 // Misma pantalla para ambos roles: un usuario normal ve su propia actividad
@@ -34,6 +35,8 @@ export default function UserDashboardScreen() {
         )}
 
         {!isAdmin && <TeamInvitationsCard onChanged={() => setReloadKey((k) => k + 1)} />}
+
+        {!isAdmin && <JornadaNoticesCard />}
 
         {isAdmin && <AdminUserPicker onRefresh={() => setReloadKey((k) => k + 1)} />}
 

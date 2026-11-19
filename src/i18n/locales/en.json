@@ -646,7 +646,22 @@
     "driverHint": "Pending trips in this shift will move to the driver you choose. If you leave it unassigned, whoever joins with the shift code will become its driver.",
     "delete": "Delete shift",
     "deleteConfirm": "Delete {{label}}? Only possible if it has no trips.",
-    "jornada": "Shift"
+    "jornada": "Shift",
+    "assignedTitle": "Drivers on this shift",
+    "assignedHint": "Every driver you add gets a mandatory notice in the app (and by email if configured). When they were notified and whether they saw it is recorded.",
+    "noTeam": "You don't have drivers in your team yet.",
+    "mainDriver": "main",
+    "noticeWillSend": "A notice will be sent when you save (mandatory)",
+    "noticeSent": "Notified {{date}}",
+    "noticeSeen": "seen {{date}}",
+    "noticeNotSeen": "not seen yet",
+    "visibilityTitle": "Unassigned trips visible to",
+    "visibilityTeam": "Whole team",
+    "visibilityDrivers": "Assigned drivers only",
+    "myTitle": "Assigned shifts",
+    "myText": "{{name}} assigned you “{{label}}” on {{date}}",
+    "markSeen": "Seen",
+    "seen": "Seen"
   },
   "expenses": {
     "newTitle": "New expense",

@@ -646,7 +646,22 @@
     "driverHint": "Los viajes pendientes de esta jornada pasarán al conductor que elijas. Si eliges un conductor sin asignar, quien se una con el código de la jornada será su conductor.",
     "delete": "Eliminar jornada",
     "deleteConfirm": "¿Eliminar {{label}}? Solo se puede si no tiene viajes.",
-    "jornada": "Jornada"
+    "jornada": "Jornada",
+    "assignedTitle": "Conductores de la jornada",
+    "assignedHint": "Cada conductor que añadas recibe un aviso obligatorio en la app (y por correo si está configurado). Queda registrado cuándo se le avisó y si lo ha visto.",
+    "noTeam": "Todavía no tienes conductores en tu equipo.",
+    "mainDriver": "principal",
+    "noticeWillSend": "Se le enviará un aviso al guardar (obligatorio)",
+    "noticeSent": "Avisado el {{date}}",
+    "noticeSeen": "visto el {{date}}",
+    "noticeNotSeen": "aún no lo ha visto",
+    "visibilityTitle": "Viajes sin asignar visibles para",
+    "visibilityTeam": "Todo el equipo",
+    "visibilityDrivers": "Solo los asignados",
+    "myTitle": "Jornadas asignadas",
+    "myText": "{{name}} te ha asignado «{{label}}» el {{date}}",
+    "markSeen": "Visto",
+    "seen": "Visto"
   },
   "expenses": {
     "newTitle": "Nuevo gasto",
