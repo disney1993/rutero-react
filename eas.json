@@ -21,6 +21,15 @@
       "env": {
         "API_BASE": "https://rutero-api-production-of3dnr.laravel.cloud"
       }
+    },
+    "full": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.turutero.app"
+      }
     }
   },
   "submit": {

@@ -11,7 +11,7 @@ module.exports = ({ config }) => ({
   ...config,
   extra: {
     ...config.extra,
-    apiBase: process.env.API_BASE || config.extra.apiBase,
+    apiBase: process.env.EXPO_PUBLIC_API_URL || process.env.API_BASE || config.extra.apiBase,
     googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID || config.extra.googleIosClientId,
     googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || config.extra.googleAndroidClientId,
     googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID || config.extra.googleWebClientId,
